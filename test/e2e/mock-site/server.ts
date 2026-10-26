@@ -135,7 +135,13 @@ export class MockSite {
       { fieldId: 11, fieldNo: 2, inputType: 5, required: true, title: "生年月日" },
       { fieldId: 15, fieldNo: 4, inputType: 1, required: true, title: "電話番号" },
       { fieldId: 16, fieldNo: 5, inputType: 1, required: true, title: "診察券番号" },
-      ...this.customFields.map((c, i) => ({ fieldId: 20 + i, fieldNo: 0, inputType: 4, required: c.required, title: c.title })),
+      ...this.customFields.map((c, i) => ({
+        fieldId: 20 + i,
+        fieldNo: 0,
+        inputType: 4,
+        required: c.required,
+        title: c.title,
+      })),
     ];
   }
 
@@ -181,7 +187,12 @@ export class MockSite {
 
   private async handleBook(req: IncomingMessage, res: ServerResponse): Promise<void> {
     this.bookPostCount++;
-    const body = JSON.parse(await readBody(req)) as { date: string; frameId: string; count: number; fields: Record<string, string> };
+    const body = JSON.parse(await readBody(req)) as {
+      date: string;
+      frameId: string;
+      count: number;
+      fields: Record<string, string>;
+    };
     if (this.bookResponse === "hang") {
       this.hung.add(res);
       res.on("close", () => this.hung.delete(res));

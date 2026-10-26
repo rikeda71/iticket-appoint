@@ -20,7 +20,10 @@ describe("Ledger", () => {
 
   it("壊れた行は無視する", () => {
     const dir = tmp();
-    writeFileSync(join(dir, "ledger.jsonl"), 'not json\n{"date":"2026-10-26","clinic":"c","patients":["a"],"at":"x"}\n');
+    writeFileSync(
+      join(dir, "ledger.jsonl"),
+      'not json\n{"date":"2026-10-26","clinic":"c","patients":["a"],"at":"x"}\n',
+    );
     expect(new Ledger(dir).entries()).toHaveLength(1);
   });
 

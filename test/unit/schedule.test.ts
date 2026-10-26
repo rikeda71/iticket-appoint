@@ -100,7 +100,16 @@ describe("poll", () => {
     const c = fakeClock(at(9, 0));
     let n = 0;
     await expect(
-      poll({ ...base, maxAttempts: 3, clock: c, startAt: at(9, 0), attempt: async () => { n++; throw new NotOpenError("x"); } }),
+      poll({
+        ...base,
+        maxAttempts: 3,
+        clock: c,
+        startAt: at(9, 0),
+        attempt: async () => {
+          n++;
+          throw new NotOpenError("x");
+        },
+      }),
     ).rejects.toBeInstanceOf(GaveUpError);
     expect(n).toBe(3);
   });
@@ -115,7 +124,10 @@ describe("poll", () => {
         clock: c,
         startAt: at(9, 0),
         deadline: at(9, 1),
-        attempt: async () => { n++; throw new NotOpenError("x"); },
+        attempt: async () => {
+          n++;
+          throw new NotOpenError("x");
+        },
       }),
     ).rejects.toThrow(/deadline/);
     expect(n).toBe(4); // 9:00:00, :20, :40, 9:01:00
@@ -125,7 +137,15 @@ describe("poll", () => {
     const c = fakeClock(at(9, 0));
     let n = 0;
     await expect(
-      poll({ ...base, clock: c, startAt: at(9, 0), attempt: async () => { n++; throw new ValidationError("bad"); } }),
+      poll({
+        ...base,
+        clock: c,
+        startAt: at(9, 0),
+        attempt: async () => {
+          n++;
+          throw new ValidationError("bad");
+        },
+      }),
     ).rejects.toBeInstanceOf(ValidationError);
     expect(n).toBe(1);
   });

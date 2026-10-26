@@ -19,7 +19,11 @@ describe("chooseFrame", () => {
   });
 
   it("pattern なしは予約可能な最初の枠", () => {
-    const fs = [frame(0, "午前", { bookable: false }), frame(1, "午後", { bookable: true }), frame(2, "夜", { bookable: true })];
+    const fs = [
+      frame(0, "午前", { bookable: false }),
+      frame(1, "午後", { bookable: true }),
+      frame(2, "夜", { bookable: true }),
+    ];
     expect(chooseFrame(fs).index).toBe(1);
   });
 

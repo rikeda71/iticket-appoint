@@ -37,16 +37,24 @@ export async function readBusinessTop(page: Page): Promise<BusinessTop> {
     const l = page.locator(sel).first();
     return (await l.count()) > 0 ? ((await l.textContent()) ?? "").trim() : "";
   };
-  const mode = (await page.locator(TOP.situationOrder).count()) > 0
-    ? "order"
-    : (await page.locator(TOP.situationTimezone).count()) > 0
-      ? "timezone"
-      : "unknown";
+  const mode =
+    (await page.locator(TOP.situationOrder).count()) > 0
+      ? "order"
+      : (await page.locator(TOP.situationTimezone).count()) > 0
+        ? "timezone"
+        : "unknown";
   const nonService = await text(TOP.nonService);
   const body = page.locator(TOP.situationBody).first();
   return {
     clinicName: await text(TOP.clinicName),
-    businessName: ((await page.locator(TOP.businessName).count()) === 0 ? "" : await page.locator(TOP.businessName).first().evaluate((el) => el.firstChild?.textContent ?? "").catch(() => "")).trim(),
+    businessName: ((await page.locator(TOP.businessName).count()) === 0
+      ? ""
+      : await page
+          .locator(TOP.businessName)
+          .first()
+          .evaluate((el) => el.firstChild?.textContent ?? "")
+          .catch(() => "")
+    ).trim(),
     mode,
     ...(nonService ? { nonService } : {}),
     hasBookLink: (await page.locator(TOP.bookLink).count()) > 0,

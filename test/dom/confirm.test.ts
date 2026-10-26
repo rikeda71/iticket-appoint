@@ -49,23 +49,31 @@ describe("verifyConfirm", () => {
 
   it("2 人目だけ違う場合は 2 人目を指摘する", async () => {
     await serveHtml(page, html, CONFIRM_PATH);
-    await expect(verifyConfirm(page, [taro(), patient("jiro", { name: "佐藤 次郎" })], 3000)).rejects.toThrow(/2 人目に jiro/);
+    await expect(verifyConfirm(page, [taro(), patient("jiro", { name: "佐藤 次郎" })], 3000)).rejects.toThrow(
+      /2 人目に jiro/,
+    );
   });
 
   it("患者ブロックが足りなければ AppError", async () => {
     await serveHtml(page, html, CONFIRM_PATH);
-    await expect(verifyConfirm(page, [taro(), hanako(), patient("c", { name: "三人目" })], 3000)).rejects.toThrow(/3 人目に c の氏名/);
+    await expect(verifyConfirm(page, [taro(), hanako(), patient("c", { name: "三人目" })], 3000)).rejects.toThrow(
+      /3 人目に c の氏名/,
+    );
   });
 
   it("電話番号が表示されていて設定と違えば AppError", async () => {
     await serveHtml(page, html, CONFIRM_PATH);
-    await expect(verifyConfirm(page, [patient("taro", { phone: "090-9999-9999" })], 3000)).rejects.toThrow(/電話番号が設定と一致しません/);
+    await expect(verifyConfirm(page, [patient("taro", { phone: "090-9999-9999" })], 3000)).rejects.toThrow(
+      /電話番号が設定と一致しません/,
+    );
   });
 
   it("電話番号が表示されていなければ照合しない", async () => {
     await serveHtml(page, html, CONFIRM_PATH);
     // 2 人目のブロックには電話の表示がない
-    await expect(verifyConfirm(page, [taro(), patient("hanako", { name: "鈴木花子", phone: "03-0000-0000" })], 3000)).resolves.toBeTypeOf("string");
+    await expect(
+      verifyConfirm(page, [taro(), patient("hanako", { name: "鈴木花子", phone: "03-0000-0000" })], 3000),
+    ).resolves.toBeTypeOf("string");
   });
 
   it("案内文が「まだ完了していません」でなければ AppError", async () => {
@@ -83,7 +91,10 @@ describe("submitConfirm", () => {
   const setup = async (onClick: "complete" | { modal: string } | "nothing") => {
     await serveHtml(page, html, CONFIRM_PATH);
     await page.evaluate((mode) => {
-      document.body.insertAdjacentHTML("beforeend", `<section class="ipk-exception-error" style="display:none"><div class="ipk-exception-error-body"></div></section>`);
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<section class="ipk-exception-error" style="display:none"><div class="ipk-exception-error-body"></div></section>`,
+      );
       (window as unknown as { __clicks: number }).__clicks = 0;
       document.getElementById("submit")!.addEventListener("click", () => {
         (window as unknown as { __clicks: number }).__clicks++;

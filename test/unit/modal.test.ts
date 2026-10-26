@@ -46,7 +46,9 @@ describe("classifyModalText", () => {
 
   describe("分類順序による優先", () => {
     it("session は transient/already より優先", () => {
-      expect(classifyModalText("通信エラーです。時間が経っているのでトップページからやり直してください")).toBe("session");
+      expect(classifyModalText("通信エラーです。時間が経っているのでトップページからやり直してください")).toBe(
+        "session",
+      );
       expect(classifyModalText("既に予約があります。トップページからやり直してください")).toBe("session");
     });
     it("transient は already より優先", () => {

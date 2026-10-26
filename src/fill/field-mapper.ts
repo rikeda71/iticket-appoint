@@ -55,7 +55,9 @@ function byType(inputType: number, value: string): FillAction {
 export function planField(key: FieldKey, title: string, patient: Patient, patientLabel = ""): FillAction {
   const missing = (what: string): FillAction => {
     if (key.required) {
-      throw new MissingValueError(`${patientLabel}必須項目「${title}」に入れる値がありません (${what} を設定してください)`);
+      throw new MissingValueError(
+        `${patientLabel}必須項目「${title}」に入れる値がありません (${what} を設定してください)`,
+      );
     }
     return { kind: "skip", reason: `${what} が未設定 (任意項目)` };
   };
@@ -70,7 +72,9 @@ export function planField(key: FieldKey, title: string, patient: Patient, patien
     }
     case FieldNo.sex:
       if (!patient.sex) return missing("sex");
-      return patient.sex === "male" ? { kind: "radio", match: /男/, value: "0" } : { kind: "radio", match: /女/, value: "1" };
+      return patient.sex === "male"
+        ? { kind: "radio", match: /男/, value: "0" }
+        : { kind: "radio", match: /女/, value: "1" };
     case FieldNo.contact:
       return byType(key.inputType, phoneDigits(patient.phone));
     case FieldNo.patientCardNo:
@@ -81,7 +85,10 @@ export function planField(key: FieldKey, title: string, patient: Patient, patien
       if (key.inputType === InputType.text || key.inputType === InputType.textarea) {
         return { kind: "fill", value: patient.new_patient ? "新患" : "再診" };
       }
-      return { kind: "radio", match: patient.new_patient ? /新患|初診|初めて|はじめて|はい/ : /再診|いいえ|2回目|二回目/ };
+      return {
+        kind: "radio",
+        match: patient.new_patient ? /新患|初診|初めて|はじめて|はい/ : /再診|いいえ|2回目|二回目/,
+      };
     case FieldNo.callTime: {
       const v = findCustomValue(title, patient.custom_fields);
       return v !== undefined ? byType(key.inputType, v) : missing(`custom_fields["${title}"]`);

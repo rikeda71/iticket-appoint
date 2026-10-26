@@ -46,7 +46,9 @@ export function planFields(raw: RawField[], patients: ResolvedPatient[]): Planne
     return key ? [{ key, title: r.title }] : [];
   });
   if (parsed.length === 0) {
-    throw new AppError("入力欄が見つかりません (画面の構成が変わった可能性があります。artifacts の HTML を確認してください)");
+    throw new AppError(
+      "入力欄が見つかりません (画面の構成が変わった可能性があります。artifacts の HTML を確認してください)",
+    );
   }
   // 患者番号は 1 始まりだが、念のため出現順で対応付ける
   const indices = [...new Set(parsed.map((p) => p.key.patientIndex))].sort((a, b) => a - b);
@@ -73,7 +75,13 @@ async function applyRadio(page: Page, f: PlannedField, action: Extract<FillActio
   for (let i = 0; i < n && !target; i++) {
     const r = radios.nth(i);
     const id = await r.getAttribute("id");
-    const label = id ? ((await page.locator(`label[for="${id}"]`).first().textContent().catch(() => "")) ?? "") : "";
+    const label = id
+      ? ((await page
+          .locator(`label[for="${id}"]`)
+          .first()
+          .textContent()
+          .catch(() => "")) ?? "")
+      : "";
     if (action.match?.test(label)) target = r;
   }
   if (!target && action.value !== undefined) {
@@ -108,7 +116,9 @@ async function applyField(page: Page, f: PlannedField): Promise<void> {
         return;
       }
       // value 一致で選び、なければラベル一致 (例: 年の「1990（平成2）年」)
-      const options = await el.evaluate((s) => [...(s as HTMLSelectElement).options].map((o) => ({ value: o.value, label: o.text.trim() })));
+      const options = await el.evaluate((s) =>
+        [...(s as HTMLSelectElement).options].map((o) => ({ value: o.value, label: o.text.trim() })),
+      );
       const hit =
         options.find((o) => o.value === a.value) ??
         options.find((o) => o.label === a.value) ??
@@ -144,13 +154,18 @@ export async function fillInputAndProceed(
 
   const fields = planFields(await collectFields(page), patients);
   for (const f of fields) {
-    opts.log?.(`  入力: ${f.patient.key} 「${f.title}」 ${f.action.kind === "skip" ? `(skip: ${f.action.reason})` : f.action.kind}`);
+    opts.log?.(
+      `  入力: ${f.patient.key} 「${f.title}」 ${f.action.kind === "skip" ? `(skip: ${f.action.reason})` : f.action.kind}`,
+    );
     await applyField(page, f);
   }
 
   const cancel = page.locator(INPUT.cancelCode);
   if ((await cancel.count()) > 0) {
-    if (!opts.cancelCode) throw new MissingValueError("この枠はキャンセルコード (4 桁) が必要です。clinics.<key>.cancel_code を設定してください");
+    if (!opts.cancelCode)
+      throw new MissingValueError(
+        "この枠はキャンセルコード (4 桁) が必要です。clinics.<key>.cancel_code を設定してください",
+      );
     await cancel.fill(opts.cancelCode);
   }
 
@@ -161,7 +176,10 @@ export async function fillInputAndProceed(
 
   await page.locator(INPUT.submit).first().click();
   for (let i = 0; i < 2; i++) {
-    const o = await waitOutcome(page, PATH.confirm, timeoutMs, { errors: INPUT.validationErrors, terms: INPUT.termsModal });
+    const o = await waitOutcome(page, PATH.confirm, timeoutMs, {
+      errors: INPUT.validationErrors,
+      terms: INPUT.termsModal,
+    });
     if (o.kind === "url") return { fields };
     if (o.kind === "modal") throw modalError(o.text);
     if (o.kind === "extra" && o.name === "errors") {

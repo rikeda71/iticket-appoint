@@ -40,7 +40,9 @@ export class Ledger {
 
   /** 同じ日・医院で、指定患者のいずれかが予約済み (または送信済みで結果不明) ならそのエントリを返す */
   findBooked(date: string, clinic: string, patients: string[]): LedgerEntry | undefined {
-    return this.entries().find((e) => e.date === date && e.clinic === clinic && e.patients.some((p) => patients.includes(p)));
+    return this.entries().find(
+      (e) => e.date === date && e.clinic === clinic && e.patients.some((p) => patients.includes(p)),
+    );
   }
 
   record(entry: LedgerEntry): void {

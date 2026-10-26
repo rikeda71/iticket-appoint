@@ -86,7 +86,10 @@ describe("planFields", () => {
   });
 
   it("医院独自項目はタイトルで custom_fields と照合する", () => {
-    const r = planFields([{ name: "1_30_0_4_0", title: "症状" }], [patient("taro", { custom_fields: { 症状: "鼻水" } })]);
+    const r = planFields(
+      [{ name: "1_30_0_4_0", title: "症状" }],
+      [patient("taro", { custom_fields: { 症状: "鼻水" } })],
+    );
     expect(r[0]?.action).toEqual({ kind: "fill", value: "鼻水" });
   });
 

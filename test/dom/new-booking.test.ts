@@ -1,7 +1,13 @@
 import type { Browser, BrowserContext, Page } from "playwright";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { FullError, NotOpenError, ValidationError } from "../../src/flow/errors.js";
-import { chooseFrame, goToInput, openNewBooking, readFrames, selectTodayAndCount } from "../../src/pages/new-booking.js";
+import {
+  chooseFrame,
+  goToInput,
+  openNewBooking,
+  readFrames,
+  selectTodayAndCount,
+} from "../../src/pages/new-booking.js";
 import { fixture, launch, newPage, serveHtml } from "./helpers.js";
 
 let browser: Browser;
@@ -36,7 +42,12 @@ describe("readFrames", () => {
       outOfPeriod: false,
       message: "",
     });
-    expect(fs[1]).toMatchObject({ name: "午後(15:00 - 18:00)", wait: "現在 10人 待ち", bookable: false, message: "満員のため受付を終了しました" });
+    expect(fs[1]).toMatchObject({
+      name: "午後(15:00 - 18:00)",
+      wait: "現在 10人 待ち",
+      bookable: false,
+      message: "満員のため受付を終了しました",
+    });
     expect(fs[2]).toMatchObject({ name: "夜(19:00 - 21:00)", bookable: false, outOfPeriod: true });
     // is-hidden クラス付きのボタンは、見えていても予約不可
     expect(fs[3]).toMatchObject({ name: "予備(22:00 - 23:00)", bookable: false, outOfPeriod: false });
@@ -85,7 +96,6 @@ describe("readFrames + chooseFrame", () => {
   });
 });
 
-
 describe("goToInput", () => {
   it("○枠の「次へ」で入力画面の URL に遷移する", async () => {
     await serveHtml(page, frames);
@@ -121,7 +131,9 @@ describe("openNewBooking (https://park.paa.jp をローカルで差し替え)", 
   const topHtml = fixture("business-top-closed.html");
 
   it("枠一覧が出れば成功", async () => {
-    await page.route(`${origin}/**`, (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: frames }));
+    await page.route(`${origin}/**`, (r) =>
+      r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: frames }),
+    );
     await openNewBooking(page, clinic, 5000);
     expect(new URL(page.url()).pathname).toBe("/park2/clinics/1/businesses/01/bookings/new");
   });
@@ -129,7 +141,9 @@ describe("openNewBooking (https://park.paa.jp をローカルで差し替え)", 
   it("TOP に戻されたら「診察時間外」付きの NotOpenError", async () => {
     // クライアント側のリダイレクトを模す (302 を fulfill すると route を通らず実サイトへ出てしまうため使わない)
     const redirected = `${topHtml}<script>history.replaceState(null, "", "/park2/clinics/1/businesses/01")</script>`;
-    await page.route(`${origin}/**`, (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: redirected }));
+    await page.route(`${origin}/**`, (r) =>
+      r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: redirected }),
+    );
     await expect(openNewBooking(page, clinic, 5000)).rejects.toThrow(/TOP に戻されました: 診察時間外/);
     await expect(openNewBooking(page, clinic, 5000)).rejects.toBeInstanceOf(NotOpenError);
   });
@@ -137,8 +151,11 @@ describe("openNewBooking (https://park.paa.jp をローカルで差し替え)", 
   it("当日の枠がなければ NotOpenError", async () => {
     const none = `<section class="ipk-date-select"><span>本日</span></section><section class="ipk-time-list-j"></section>
       <section class="ipk-non-time-frame"><p>現在、予約可能な時間ではありません。</p></section>`;
-    await page.route(`${origin}/**`, (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: none }));
-    await expect(openNewBooking(page, clinic, 5000)).rejects.toThrow(/当日の枠がありません: 現在、予約可能な時間ではありません/);
+    await page.route(`${origin}/**`, (r) =>
+      r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: none }),
+    );
+    await expect(openNewBooking(page, clinic, 5000)).rejects.toThrow(
+      /当日の枠がありません: 現在、予約可能な時間ではありません/,
+    );
   });
 });
-

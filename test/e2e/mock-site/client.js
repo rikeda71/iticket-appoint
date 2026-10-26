@@ -8,7 +8,8 @@
   const app = document.getElementById("app");
   const st = { count: 1, date: "", frame: null, form: [], values: {} };
 
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const esc = (s) =>
+    String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   const $ = (sel) => document.querySelector(sel);
 
   function showModal(msg) {
@@ -22,7 +23,9 @@
 
   // ---- 枠一覧 ----
   function renderFramesScreen() {
-    const opts = [1, 2, 3, 4, 5].map((n) => `<option value="${n}"${n === st.count ? " selected" : ""}>${n}人</option>`).join("");
+    const opts = [1, 2, 3, 4, 5]
+      .map((n) => `<option value="${n}"${n === st.count ? " selected" : ""}>${n}人</option>`)
+      .join("");
     app.innerHTML = `
       <section class="ipk-date-select"><input type="radio" id="today" checked><label for="today">本日</label></section>
       <section class="ipk-select-book-num"><select>${opts}</select></section>
@@ -70,24 +73,30 @@
   }
 
   // ---- 入力 ----
-  const nameOf = (n, f, part) => `${n}_${f.fieldId}_${f.fieldNo}_${f.inputType}_${f.required ? 1 : 0}${part ? `_${part}` : ""}`;
+  const nameOf = (n, f, part) =>
+    `${n}_${f.fieldId}_${f.fieldNo}_${f.inputType}_${f.required ? 1 : 0}${part ? `_${part}` : ""}`;
   const must = (f) => (f.required ? '<span class="ipk-must-txt">必須</span>' : "");
 
   function fieldHtml(n, f) {
     if (f.inputType === 5) {
       const year = new Date().getFullYear();
-      const sel = (part, items) => `<select name="${nameOf(n, f, part)}"><option value="">--</option>${items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select>`;
+      const sel = (part, items) =>
+        `<select name="${nameOf(n, f, part)}"><option value="">--</option>${items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select>`;
       const years = Array.from({ length: 100 }, (_, i) => [year - i, `${year - i}年`]);
       const months = Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1}月`]);
       const dates = Array.from({ length: 31 }, (_, i) => [i + 1, `${i + 1}日`]);
       return `<div class="ipk-one-item"><label>${esc(f.title)}${must(f)}</label>${sel("year", years)}${sel("month", months)}${sel("date", dates)}</div>`;
     }
-    const control = f.inputType === 4 ? `<textarea name="${nameOf(n, f)}"></textarea>` : `<input type="text" name="${nameOf(n, f)}">`;
+    const control =
+      f.inputType === 4 ? `<textarea name="${nameOf(n, f)}"></textarea>` : `<input type="text" name="${nameOf(n, f)}">`;
     return `<div class="ipk-one-item"><label>${esc(f.title)}${must(f)}</label>${control}</div>`;
   }
 
   function renderInput() {
-    const blocks = Array.from({ length: st.count }, (_, i) => `<h3>${i + 1}人目</h3>${st.form.map((f) => fieldHtml(i + 1, f)).join("")}`).join("");
+    const blocks = Array.from(
+      { length: st.count },
+      (_, i) => `<h3>${i + 1}人目</h3>${st.form.map((f) => fieldHtml(i + 1, f)).join("")}`,
+    ).join("");
     app.innerHTML = `
       <section class="ipk-input-patient">
         <div class="ipk-input-patient-error is-hidden"></div>
@@ -157,7 +166,10 @@
     const blocks = Array.from({ length: st.count }, (_, i) => {
       const n = i + 1;
       const items = st.form
-        .map((f) => `<div class="ipk-confirm-patient-item"><span>${esc(f.title)}</span><span class="ipk-confirm-patient-data">${esc(display(n, f))}</span></div>`)
+        .map(
+          (f) =>
+            `<div class="ipk-confirm-patient-item"><span>${esc(f.title)}</span><span class="ipk-confirm-patient-data">${esc(display(n, f))}</span></div>`,
+        )
         .join("");
       return `<div id="ipk-input-patient-confirm-form-${n}">${items}</div>`;
     }).join("");

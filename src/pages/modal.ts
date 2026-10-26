@@ -17,7 +17,8 @@ export function classifyModalText(text: string): ModalKind {
   if (/既に|すでに|重複|同一の?(患者|方)/.test(text)) return "already";
   // 「受付時間外のため受付できません」を満枠と誤認しないよう notOpen を先に判定する
   if (/(受付|予約)(可能な)?時間(外|ではありません)|受付(開始)?前|まだ.*(受付|開始)|時間外/.test(text)) return "notOpen";
-  if (/満員|満枠|満了|上限|定員|人数制限|受付(を|は)?終了|締め?切|受付できません|空きがありません/.test(text)) return "full";
+  if (/満員|満枠|満了|上限|定員|人数制限|受付(を|は)?終了|締め?切|受付できません|空きがありません/.test(text))
+    return "full";
   return "other";
 }
 
@@ -40,11 +41,25 @@ export function modalError(text: string): AppError {
 /** 表示中のエラーモーダルの本文。なければ undefined */
 export async function readErrorModal(page: Page): Promise<string | undefined> {
   const root = page.locator(ERROR_MODAL.root);
-  if (!(await root.first().isVisible().catch(() => false))) return undefined;
-  const text = await root.locator(ERROR_MODAL.body).first().innerText().catch(() => "");
+  if (
+    !(await root
+      .first()
+      .isVisible()
+      .catch(() => false))
+  )
+    return undefined;
+  const text = await root
+    .locator(ERROR_MODAL.body)
+    .first()
+    .innerText()
+    .catch(() => "");
   return text.replace(/\s+/g, " ").trim() || "(本文なし)";
 }
 
 export async function closeErrorModal(page: Page): Promise<void> {
-  await page.locator(ERROR_MODAL.close).first().click({ timeout: 3000 }).catch(() => undefined);
+  await page
+    .locator(ERROR_MODAL.close)
+    .first()
+    .click({ timeout: 3000 })
+    .catch(() => undefined);
 }

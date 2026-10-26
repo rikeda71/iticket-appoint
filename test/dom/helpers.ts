@@ -23,8 +23,14 @@ export async function newPage(browser: Browser): Promise<{ context: BrowserConte
 }
 
 /** 擬似 URL (http://localhost.test/...) に HTML を返すようにして goto する。pushState が使える */
-export async function serveHtml(page: Page, html: string, path = "/park2/clinics/1/businesses/01/bookings/new"): Promise<void> {
-  await page.route(`${HOST}/**`, (r) => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html }));
+export async function serveHtml(
+  page: Page,
+  html: string,
+  path = "/park2/clinics/1/businesses/01/bookings/new",
+): Promise<void> {
+  await page.route(`${HOST}/**`, (r) =>
+    r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html }),
+  );
   await page.goto(`${HOST}${path}`, { waitUntil: "domcontentloaded" });
 }
 
