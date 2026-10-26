@@ -1,0 +1,57 @@
+<!-- 合成 HTML (src/site/selectors.ts の NEW_BOOKING に合わせたもの。個人情報なし) -->
+<style>
+  p.is-hidden, div.is-hidden, section.is-hidden { display: none; }
+</style>
+<div class="ipk-l-main-contents">
+  <section class="ipk-date-select"><input type="radio" id="today" checked><label for="today">本日</label></section>
+  <section class="ipk-select-book-num">
+    <select><option value="1" selected>1人</option><option value="2">2人</option></select>
+  </section>
+  <section class="ipk-non-time-frame is-hidden"><p>現在、予約可能な時間ではありません。</p></section>
+  <section class="ipk-time-list-j">
+    <!-- 0: ○ 予約可 -->
+    <div id="f-am">
+      <span class="timezone">午前<br>(09:00 - 12:30)</span>
+      <span class="ipk-time-list-wait">現在 3人 待ち</span>
+      <p class="ipk-time-list-message is-hidden">受付を終了しました</p>
+      <button class="ipk-primary-btn" data-frame="11">次へ</button>
+    </div>
+    <!-- 1: × ボタンが非表示 (display:none) でメッセージ表示 -->
+    <div id="f-pm">
+      <span class="timezone">午後<br>(15:00 - 18:00)</span>
+      <span class="ipk-time-list-wait">現在 10人 待ち</span>
+      <p class="ipk-time-list-message">満員のため受付を終了しました</p>
+      <button class="ipk-primary-btn" style="display:none" data-frame="12">次へ</button>
+    </div>
+    <!-- 2: 予約可能時間外 (ボタンは is-hidden) -->
+    <div id="f-night">
+      <span class="timezone">夜<br>(19:00 - 21:00)</span>
+      <div class="ipk-bookable-time is-out-of-period">予約可能時間外</div>
+      <button class="ipk-primary-btn is-hidden" style="display:none" data-frame="13">次へ</button>
+    </div>
+    <!-- 3: class に is-hidden があるが CSS では隠れていないボタン -->
+    <div id="f-spare">
+      <span class="timezone">予備<br>(22:00 - 23:00)</span>
+      <button class="ipk-primary-btn is-hidden" data-frame="14">次へ</button>
+    </div>
+    <!-- 4: 押すとエラーモーダルが出る枠 -->
+    <div id="f-modal">
+      <span class="timezone">特別<br>(23:00 - 23:30)</span>
+      <button class="ipk-primary-btn" data-modal="受付時間外です">次へ</button>
+    </div>
+  </section>
+  <section class="ipk-exception-error" style="display:none"><div class="ipk-exception-error-body"></div><div class="modal-btn-area"><button>閉じる</button></div></section>
+</div>
+<script>
+  document.querySelectorAll("section.ipk-time-list-j button").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (b.dataset.modal) {
+        const m = document.querySelector("section.ipk-exception-error");
+        m.querySelector(".ipk-exception-error-body").textContent = b.dataset.modal;
+        m.style.display = "block";
+        return;
+      }
+      history.pushState(null, "", "/park2/clinics/1/businesses/01/bookings/new/20261026/frames/" + b.dataset.frame + "/input");
+    });
+  });
+</script>

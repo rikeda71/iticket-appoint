@@ -1,0 +1,48 @@
+# config.example.yaml をコピーして config.yaml を作ってください (config.yaml は git 管理外)。
+# GitHub Actions では、この YAML 全文を secret CONFIG_YAML に登録します。
+
+# CLI 引数 / workflow の入力を省略したときに使う値
+defaults:
+  clinic: takeda
+  patients: [taro]
+  # schedule (cron) 実行時に待つ時刻。手動実行では入力の wait_until が優先されます
+  wait_until: "09:00"
+
+clinics:
+  takeda:
+    owner_id: "2171"      # URL の /clinics/{owner_id}
+    business_no: "01"     # URL の /businesses/{business_no} (必ずクォート)
+    name: 竹田耳鼻咽喉科クリニック
+    frame: 午前           # 枠名の部分一致 (省略時は予約可能な最初の枠)
+    # cancel_code: "1234" # キャンセルコード (4 桁) を求める医院のみ。後で予約を取り消すときに使う
+
+patients:
+  taro:
+    name: 山田太郎
+    name_kana: ヤマダタロウ
+    patient_card_no: "12345"  # 診察券番号 (先頭 0 が消えないようクォート)
+    birth: "1990-01-02"
+    phone: "090-1234-5678"
+    sex: male                 # male / female (医院が求める場合のみ使用)
+    new_patient: false        # true のとき診察券番号欄は「新患」で入力 (patient_card_no は不要)
+  hanako:
+    name: 山田花子
+    name_kana: ヤマダハナコ
+    patient_card_no: "12346"
+    birth: "1992-03-04"
+    phone: "090-1234-5678"
+    sex: female
+    # 医院独自の項目: 項目タイトル (部分一致) -> 値
+    custom_fields:
+      症状: 鼻水
+
+wait:
+  interval_sec: 20   # 再試行間隔 (10 以上)
+  jitter_sec: 3      # 間隔に足すランダム秒
+  max_attempts: 60   # 最大試行回数
+  deadline: "09:30"  # この時刻を過ぎたら諦める
+  prewarm_sec: 60    # 目標時刻の何秒前にブラウザを起動するか
+
+browser:
+  headless: true
+  timeout_ms: 15000

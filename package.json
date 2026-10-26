@@ -1,0 +1,28 @@
+{
+  "name": "iticket-appoint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "アイチケット広場の予約を事前設定のプロファイルで自動化する CLI",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "cli": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "playwright": "1.64.0",
+    "yaml": "2.9.1",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

@@ -1,0 +1,64 @@
+name: 待ち状況を見る
+
+# 読み取りのみ (予約はしない)。Actions のサーバーからサイトに到達できるかの確認にも使う。
+on:
+  workflow_dispatch:
+    inputs:
+      clinic:
+        description: "医院 (config の clinics のキー。空なら defaults)"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: 設定ファイルを secret から書き出す
+        env:
+          CONFIG_YAML: ${{ secrets.CONFIG_YAML }}
+        run: |
+          if [ -z "$CONFIG_YAML" ]; then
+            echo "::error::secret CONFIG_YAML が未設定です (README 参照)"
+            exit 1
+          fi
+          printf '%s\n' "$CONFIG_YAML" > config.yaml
+
+      - name: 待ち状況
+        env:
+          IN_CLINIC: ${{ inputs.clinic }}
+        run: |
+          set -o pipefail
+          args=(status)
+          [ -n "$IN_CLINIC" ] && args+=("--clinic=$IN_CLINIC")
+          npx tsx src/cli.ts "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-${{ github.run_id }}
+          path: artifacts/
+          retention-days: 3
+          if-no-files-found: ignore

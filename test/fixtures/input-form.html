@@ -1,0 +1,97 @@
+<!-- 合成 HTML (src/site/selectors.ts の INPUT に合わせたもの。個人情報なし)。
+     クエリ ?mode=error|modal|terms|cancel で送信後の挙動を切り替える。送信内容は window.__submitted に残る -->
+<style>
+  div.is-hidden, section.is-hidden { display: none; }
+</style>
+<section class="ipk-input-patient">
+  <div class="ipk-input-patient-error is-hidden"><p>氏名を入力してください</p><p>電話番号が正しくありません</p></div>
+  <form onsubmit="return false">
+    <div class="ipk-one-item">
+      <label>氏名<span class="ipk-must-txt">必須</span></label>
+      <input type="text" name="1_10_1_1_1">
+    </div>
+    <div class="ipk-one-item">
+      <label>生年月日<span class="ipk-must-txt">必須</span></label>
+      <select name="1_11_2_5_1_year"></select>
+      <select name="1_11_2_5_1_month"></select>
+      <select name="1_11_2_5_1_date"></select>
+    </div>
+    <div class="ipk-one-item">
+      <div class="ipk-input-patient-item">性別<span class="ipk-must-txt">必須</span></div>
+      <input type="radio" id="sex-0" name="1_12_3_2_1" value="0"><label for="sex-0">男性</label>
+      <input type="radio" id="sex-1" name="1_12_3_2_1" value="1"><label for="sex-1">女性</label>
+    </div>
+    <div class="ipk-one-item">
+      <label>電話番号<span class="ipk-must-txt">必須</span></label>
+      <input type="text" name="1_15_4_1_1">
+    </div>
+    <div class="ipk-one-item">
+      <label>診察券番号<span class="ipk-must-txt">必須</span></label>
+      <input type="text" name="1_16_5_1_1">
+    </div>
+    <div class="ipk-one-item">
+      <label>フリガナ</label>
+      <input type="text" name="1_13_8_1_0">
+    </div>
+    <div class="ipk-one-item">
+      <label>アレルギー</label>
+      <input type="checkbox" name="1_14_0_3_0" value="花粉">
+      <input type="checkbox" name="1_14_0_3_0" value="卵">
+      <input type="checkbox" name="1_14_0_3_0" value="薬">
+    </div>
+    <div class="ipk-one-item">
+      <label>症状</label>
+      <textarea name="1_17_0_4_0"></textarea>
+    </div>
+    <div id="extra"></div>
+    <div>
+      <input type="checkbox" id="consent-checkbox"><label for="consent-checkbox">利用規約に同意する</label>
+    </div>
+    <div class="btn-area"><button type="button" class="ipk-primary-btn">次へ</button></div>
+  </form>
+</section>
+<section class="ipk-privacy-policy-modal is-hidden"><p>利用規約に同意しますか</p><button class="ipk-primary-btn">はい</button></section>
+<section class="ipk-exception-error" style="display:none"><div class="ipk-exception-error-body"></div><div class="modal-btn-area"><button>閉じる</button></div></section>
+<script>
+  const mode = new URLSearchParams(location.search).get("mode");
+  const fill = (sel, items) => {
+    const el = document.querySelector(sel);
+    el.innerHTML = '<option value="">--</option>' + items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  };
+  // 年は「1990（平成2）年」のような表示、value は西暦
+  fill('[name="1_11_2_5_1_year"]', Array.from({ length: 60 }, (_, i) => 1960 + i).map((y) => [y, `${y}（年号）年`]));
+  fill('[name="1_11_2_5_1_month"]', Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1}月`]));
+  fill('[name="1_11_2_5_1_date"]', Array.from({ length: 31 }, (_, i) => [i + 1, `${i + 1}日`]));
+  if (mode === "cancel") {
+    document.getElementById("extra").innerHTML = '<input type="text" name="cancelCode">';
+  }
+  const collect = () => {
+    const out = {};
+    for (const el of document.querySelectorAll("form [name]")) {
+      if ((el.type === "radio" || el.type === "checkbox") && !el.checked) continue;
+      (out[el.name] ??= []).push(el.value);
+    }
+    out.__consent = document.getElementById("consent-checkbox")?.checked ?? false;
+    return out;
+  };
+  const goConfirm = () => history.pushState(null, "", "/park2/clinics/1/businesses/01/bookings/new_confirm");
+  document.querySelector("div.btn-area button").addEventListener("click", () => {
+    window.__submitted = collect();
+    window.__clicks = (window.__clicks ?? 0) + 1;
+    if (mode === "error") {
+      document.querySelector("div.ipk-input-patient-error").classList.remove("is-hidden");
+    } else if (mode === "modal") {
+      const m = document.querySelector("section.ipk-exception-error");
+      m.querySelector(".ipk-exception-error-body").textContent = "受付時間外です";
+      m.style.display = "block";
+    } else if (mode === "terms" && !document.getElementById("consent-checkbox")?.checked) {
+      document.querySelector("section.ipk-privacy-policy-modal").classList.remove("is-hidden");
+    } else {
+      goConfirm();
+    }
+  });
+  document.querySelector("section.ipk-privacy-policy-modal button").addEventListener("click", () => {
+    window.__termsAccepted = true;
+    goConfirm();
+  });
+</script>

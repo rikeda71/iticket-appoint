@@ -1,0 +1,119 @@
+name: 予約する
+
+on:
+  workflow_dispatch:
+    inputs:
+      patients:
+        description: "患者 (config の patients のキー。複数はカンマ区切り 例: taro,hanako。空なら defaults)"
+        type: string
+        required: false
+        default: ""
+      wait_until:
+        description: "この時刻まで待ってから予約 (HH:MM / now=すぐ / 空なら defaults.wait_until。過ぎていればすぐ)"
+        type: string
+        required: false
+        default: ""
+      submit:
+        description: "本当に予約する (オフなら確認画面まで進めて止まる = お試し)"
+        type: boolean
+        required: false
+        default: false
+      clinic:
+        description: "医院 (config の clinics のキー。空なら defaults)"
+        type: string
+        required: false
+        default: ""
+      frame:
+        description: "枠名の部分一致 (例: 午前。空なら config の設定)"
+        type: string
+        required: false
+        default: ""
+  # 毎朝自動で予約する場合はコメントを外す。cron は UTC で、数分〜十数分遅れることがあるので
+  # 受付開始 (defaults.wait_until) の 30 分ほど前に起動して待たせる。schedule 実行は実際に予約する。
+  # schedule:
+  #   - cron: "30 23 * * 0-5" # 月〜土 JST 8:30
+
+permissions:
+  contents: read
+
+concurrency:
+  # 同じ医院への予約を並行させない (待機中の run があれば次の run は待つ)
+  group: book-${{ inputs.clinic || 'default' }}
+  cancel-in-progress: false
+
+jobs:
+  book:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: 設定ファイルを secret から書き出す
+        env:
+          CONFIG_YAML: ${{ secrets.CONFIG_YAML }}
+        run: |
+          if [ -z "$CONFIG_YAML" ]; then
+            echo "::error::secret CONFIG_YAML が未設定です (README 参照)"
+            exit 1
+          fi
+          printf '%s\n' "$CONFIG_YAML" > config.yaml
+
+      # 同じ日に「予約する」を押した記録 (state/ledger.jsonl。患者のキーのみで個人情報なし) を run 間で引き継ぎ、
+      # 結果不明・成功の後にうっかり再実行して二重予約しないようにする
+      - name: 今日の日付
+        id: today
+        run: echo "d=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache/restore@v4
+        with:
+          path: state/ledger.jsonl
+          key: ledger-${{ steps.today.outputs.d }}-${{ github.run_id }}
+          restore-keys: ledger-${{ steps.today.outputs.d }}-
+
+      - name: 予約
+        env:
+          NOTIFY_URL: ${{ secrets.NOTIFY_URL }}
+          IN_PATIENTS: ${{ inputs.patients }}
+          IN_WAIT_UNTIL: ${{ inputs.wait_until }}
+          IN_CLINIC: ${{ inputs.clinic }}
+          IN_FRAME: ${{ inputs.frame }}
+          IN_SUBMIT: ${{ github.event_name == 'schedule' || inputs.submit }}
+        run: |
+          args=(book)
+          [ -n "$IN_CLINIC" ] && args+=("--clinic=$IN_CLINIC")
+          [ -n "$IN_PATIENTS" ] && args+=("--patient=$IN_PATIENTS")
+          [ -n "$IN_WAIT_UNTIL" ] && args+=("--wait-until=$IN_WAIT_UNTIL")
+          [ -n "$IN_FRAME" ] && args+=("--frame=$IN_FRAME")
+          [ "$IN_SUBMIT" = "true" ] && args+=(--submit --yes)
+          npx tsx src/cli.ts "${args[@]}"
+
+      - if: always() && hashFiles('state/ledger.jsonl') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: state/ledger.jsonl
+          key: ledger-${{ steps.today.outputs.d }}-${{ github.run_id }}
+
+      - name: スクリーンショット等を保存 (個人情報を含むため 3 日で削除)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ github.run_id }}
+          path: artifacts/
+          retention-days: 3
+          if-no-files-found: ignore
