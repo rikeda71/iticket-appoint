@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { artifactFiles, assertLocalBaseUrl, configYaml, makeSandbox, MockSite, readLedger, runCli, type Sandbox } from "./helpers.js";
+import { artifactFiles, artifactText, assertLocalBaseUrl, configYaml, makeSandbox, MockSite, readLedger, runCli, type Sandbox } from "./helpers.js";
 
 let site: MockSite;
 let sb: Sandbox;
@@ -48,6 +48,19 @@ describe("book (E2E: モックサイト)", () => {
     const ledger = readLedger(sb);
     expect(ledger.at(-1)).toMatchObject({ clinic: "mock", patients: ["a"], status: "booked", accept_no: b.acceptNo });
     expect(artifactFiles(sb).some((f) => /-complete\.png$/.test(f))).toBe(true);
+  });
+
+  it("ITICKET_REDACT=1: 予約はできるが、個人情報が写る画面・本文は artifacts に残らない", async () => {
+    const r = await runCli(site, sb, SUBMIT, undefined, { ITICKET_REDACT: "1" });
+    expect(r.code, r.output).toBe(0);
+    expect(site.bookings).toHaveLength(1);
+    const files = artifactFiles(sb);
+    expect(files.some((f) => /-frames\.png$/.test(f))).toBe(true);
+    expect(files.some((f) => /-(confirm|complete)\.(png|html)$/.test(f))).toBe(false);
+    const text = artifactText(sb) + r.output;
+    for (const pii of ["テスト 一郎", "テスト一郎", "10001", "090-1111-2222", "09011112222", "1990"]) {
+      expect(text, pii).not.toContain(pii);
+    }
   });
 
   it("同じ設定で再度 submit: 既に予約済みとして exit 5、予約は増えない", async () => {

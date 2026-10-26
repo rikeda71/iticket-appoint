@@ -69,10 +69,10 @@ npm run cli -- book --patient taro --submit --yes --wait-until 09:00 --deadline 
    - `patients`: `taro` や `taro,hanako` (空なら defaults)
    - `wait_until`: `09:00` など (空なら defaults、`now` ですぐ)
    - `submit`: **オンで本当に予約**。オフはお試し
-5. 結果は通知と、実行ログ・Artifacts (スクリーンショット、3 日で削除) で確認できる。
+5. 結果は通知と、実行ログ・Artifacts (枠一覧などのスクリーンショット、3 日で削除) で確認できる。
 6. 「結果不明」の通知が来たら **再実行せず**、アイチケットの画面や医院で予約できているか確認する。同じ日に「予約する」を押した記録 (`state/ledger.jsonl`、Actions では cache で引き継ぎ) があると、同じ患者での再実行は止まります (`--force` で解除)。
 
-注意: Actions のログには患者のキー (taro など) や枠名が出ます。氏名などは出しませんが、Artifacts のスクリーンショット・HTML には入力内容が写ります (3 日で自動削除)。
+注意: このリポジトリは public なので、Actions のログと Artifacts は誰でも見られます。ログには患者のキー (taro など)・医院名・枠名が出ます (キーに本名を使わないでください)。`book.yml` では `ITICKET_REDACT=1` を設定しており、入力内容が写る画面 (入力・確認・完了・入力後のエラー) のスクリーンショット/HTML と確認画面の本文は Artifacts に保存しません。そのため、確認画面の中身は通知とログ (「確認画面に到達しました」) でしか確かめられません。画面を見たいときはローカルで `--headed` を付けて実行してください。
 
 毎朝自動で予約したい場合は `.github/workflows/book.yml` の `schedule` のコメントを外します (cron は UTC・遅延があるので受付開始の 30 分前程度に起動)。無料枠は private リポジトリで月 2000 分です。
 

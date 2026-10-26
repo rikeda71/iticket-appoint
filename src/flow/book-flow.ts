@@ -54,7 +54,7 @@ export async function attemptBooking(browser: Browser, p: BookParams, attempt: n
       ...(p.clinic.cancel_code ? { cancelCode: p.clinic.cancel_code } : {}),
     });
     const confirmText = await verifyConfirm(page, p.patients, timeoutMs);
-    const shot = await art.capture(page, "confirm");
+    const shot = await art.capture(page, "confirm", { personal: true });
     art.log("確認画面に到達しました");
 
     if (!p.submit) {
@@ -68,10 +68,10 @@ export async function attemptBooking(browser: Browser, p: BookParams, attempt: n
     });
     // 完了画面に着いた時点で予約は成立している。読み取りの失敗で結果不明にしない
     const info = await readComplete(page).catch((e: Error) => ({ text: `(完了画面の読み取りに失敗: ${e.message})` }) as Awaited<ReturnType<typeof readComplete>>);
-    const done = await art.capture(page, "complete");
+    const done = await art.capture(page, "complete", { personal: true });
     return { kind: "booked", frame, text: info.text, ...(info.acceptNo ? { acceptNo: info.acceptNo } : {}), ...(done ? { screenshot: done } : {}) };
   } catch (e) {
-    await art.capture(page, `error-${attempt}`);
+    await art.capture(page, `error-${attempt}`, { personal: st.stage !== "frames" });
     const msg = (e as Error).message.split("\n")[0];
     if (st.stage === "submitted") {
       // 送信後に再試行される例外 (NotOpenError 等) を絶対に外へ出さない

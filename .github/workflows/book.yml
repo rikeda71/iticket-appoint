@@ -47,6 +47,8 @@ jobs:
     timeout-minutes: 120
     env:
       TZ: Asia/Tokyo
+      # public リポジトリなので、個人情報が写る画面 (確認・完了・入力後のエラー) と本文は artifacts に保存しない
+      ITICKET_REDACT: "1"
     steps:
       - uses: actions/checkout@v4
 

@@ -81,7 +81,7 @@ export function makeSandbox(yaml: string = configYaml()): Sandbox {
 }
 
 /** CLI を子プロセスで実行する (モックはこのプロセスで動いているので同期実行しない) */
-export function runCli(site: MockSite, sb: Sandbox, args: string[], timeoutMs = 90_000): Promise<CliResult> {
+export function runCli(site: MockSite, sb: Sandbox, args: string[], timeoutMs = 90_000, extraEnv: NodeJS.ProcessEnv = {}): Promise<CliResult> {
   assertLocalBaseUrl(site.baseUrl);
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -89,6 +89,7 @@ export function runCli(site: MockSite, sb: Sandbox, args: string[], timeoutMs = 
     ITICKET_ARTIFACTS: sb.artifacts,
     ITICKET_STATE: sb.state,
     CI: "1",
+    ...extraEnv,
   };
   delete env.NOTIFY_URL;
   delete env.ITICKET_CONFIG;
@@ -119,6 +120,14 @@ export function readLedger(sb: Sandbox): LedgerEntry[] {
   } catch {
     return [];
   }
+}
+
+/** artifacts/<timestamp>/ 配下の全ファイルの中身を連結 */
+export function artifactText(sb: Sandbox): string {
+  return artifactFiles(sb)
+    .filter((f) => /\.(html|log)$/.test(f))
+    .map((f) => readFileSync(join(sb.artifacts, f), "utf8"))
+    .join("\n");
 }
 
 /** artifacts/<timestamp>/ 配下のファイル名一覧 */
