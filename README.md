@@ -17,32 +17,32 @@
 ## セットアップ (ローカル)
 
 ```sh
-npm ci
-npx playwright install chromium
+pnpm install
+pnpm exec playwright install chromium
 cp config.example.yaml config.yaml   # 医院・患者情報を記入 (git 管理外)
-npm run cli -- check-config          # 設定の検証 (個人情報はマスク表示)
+pnpm cli check-config          # 設定の検証 (個人情報はマスク表示)
 ```
 
 ## 使い方
 
 ```sh
 # 待ち状況を見る (読み取りのみ)
-npm run cli -- status
+pnpm cli status
 
 # お試し: 確認画面まで進めて止まる (artifacts/<日時>/ にスクリーンショット)
-npm run cli -- book --patient taro --wait-until now --headed
+pnpm cli book --patient taro --wait-until now --headed
 
 # 本当に予約する (確認プロンプトあり。--yes で省略)
-npm run cli -- book --patient taro --submit
+pnpm cli book --patient taro --submit
 
 # 2 人まとめて
-npm run cli -- book --patient taro --patient hanako --submit
+pnpm cli book --patient taro --patient hanako --submit
 
 # 9:00 まで待ってから予約。受付前なら 20 秒ごとに再確認、9:30 で諦める
-npm run cli -- book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
+pnpm cli book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
 ```
 
-主なオプション (`npm run cli -- book --help` で全部):
+主なオプション (`pnpm cli book --help` で全部):
 
 | オプション | 説明 |
 |---|---|
@@ -79,9 +79,9 @@ npm run cli -- book --patient taro --submit --yes --wait-until 09:00 --deadline 
 ## 開発
 
 ```sh
-npm test            # unit + DOM テスト (DOM テストはローカルの Chromium を使用)
-npm run test:e2e    # モックサイトに対する E2E (CLI を子プロセスで実行。30 秒ほどかかる)
-npm run typecheck
+pnpm test           # unit + DOM テスト (DOM テストはローカルの Chromium を使用)
+pnpm test:e2e       # モックサイトに対する E2E (CLI を子プロセスで実行。30 秒ほどかかる)
+pnpm typecheck
 ```
 
 画面のセレクタは `src/site/selectors.ts` に集約しています。サイトの画面が変わったら、まずここを直してください。各ステップの HTML/スクリーンショットは `artifacts/` に残ります。

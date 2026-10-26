@@ -52,19 +52,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - run: npx playwright install --with-deps chromium
+      - run: pnpm exec playwright install --with-deps chromium
 
       - name: 設定ファイルを secret から書き出す
         env:
@@ -103,7 +105,7 @@ jobs:
           [ -n "$IN_WAIT_UNTIL" ] && args+=("--wait-until=$IN_WAIT_UNTIL")
           [ -n "$IN_FRAME" ] && args+=("--frame=$IN_FRAME")
           [ "$IN_SUBMIT" = "true" ] && args+=(--submit --yes)
-          npx tsx src/cli.ts "${args[@]}"
+          pnpm exec tsx src/cli.ts "${args[@]}"
 
       - if: always() && hashFiles('state/ledger.jsonl') != ''
         uses: actions/cache/save@v4
