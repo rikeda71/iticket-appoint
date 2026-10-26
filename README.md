@@ -44,17 +44,17 @@ pnpm cli book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
 
 主なオプション (`pnpm cli book --help` で全部):
 
-| オプション | 説明 |
-|---|---|
-| `--clinic <key>` | 医院 (省略時 `defaults.clinic`) |
-| `--patient <key...>` | 患者。複数指定・カンマ区切り可 (省略時 `defaults.patients`) |
-| `--frame <text>` | 枠名の部分一致 (例: `午前`) |
-| `--submit` / `--yes` | 実際に予約する / 確認プロンプトを省略 |
-| `--wait-until <HH:MM\|now>` | この時刻まで待つ (省略時 `defaults.wait_until`、過ぎていれば即時) |
-| `--interval` `--max-attempts` `--deadline` | 待機モードの再試行設定 (省略時 `wait.*`) |
-| `--once` | 再試行せず 1 回だけ試す |
-| `--headed` / `--trace` | ブラウザ表示 / Playwright trace 保存 |
-| `--force` | 同じ日の予約記録 (state/ledger.jsonl) があっても実行 |
+| オプション                                 | 説明                                                              |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| `--clinic <key>`                           | 医院 (省略時 `defaults.clinic`)                                   |
+| `--patient <key...>`                       | 患者。複数指定・カンマ区切り可 (省略時 `defaults.patients`)       |
+| `--frame <text>`                           | 枠名の部分一致 (例: `午前`)                                       |
+| `--submit` / `--yes`                       | 実際に予約する / 確認プロンプトを省略                             |
+| `--wait-until <HH:MM\|now>`                | この時刻まで待つ (省略時 `defaults.wait_until`、過ぎていれば即時) |
+| `--interval` `--max-attempts` `--deadline` | 待機モードの再試行設定 (省略時 `wait.*`)                          |
+| `--once`                                   | 再試行せず 1 回だけ試す                                           |
+| `--headed` / `--trace`                     | ブラウザ表示 / Playwright trace 保存                              |
+| `--force`                                  | 同じ日の予約記録 (state/ledger.jsonl) があっても実行              |
 
 終了コード: `0` 成功 (お試しで確認画面まで到達を含む) / `2` 受付が始まらない・諦めた / `3` 入力・設定の不備 / `4` 予約ボタン押下後に結果不明 (手動で確認してください) / `5` 予約済み・満枠・受付終了 / `1` その他
 
@@ -82,6 +82,8 @@ pnpm cli book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
 pnpm test           # unit + DOM テスト (DOM テストはローカルの Chromium を使用)
 pnpm test:e2e       # モックサイトに対する E2E (CLI を子プロセスで実行。30 秒ほどかかる)
 pnpm typecheck
+pnpm lint           # oxlint
+pnpm format         # oxfmt で整形 (確認だけなら pnpm format:check)
 ```
 
 画面のセレクタは `src/site/selectors.ts` に集約しています。サイトの画面が変わったら、まずここを直してください。各ステップの HTML/スクリーンショットは `artifacts/` に残ります。

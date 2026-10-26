@@ -55,7 +55,9 @@ export async function status(o: StatusOptions): Promise<void> {
         const frames = await readFrames(page);
         out.push("当日枠:");
         for (const f of frames) {
-          out.push(`  - ${f.name} ${f.wait} ${f.bookable ? "○ 予約可" : "×"}${f.outOfPeriod ? " (予約可能時間外)" : ""}${f.message ? ` ${f.message}` : ""}`);
+          out.push(
+            `  - ${f.name} ${f.wait} ${f.bookable ? "○ 予約可" : "×"}${f.outOfPeriod ? " (予約可能時間外)" : ""}${f.message ? ` ${f.message}` : ""}`,
+          );
         }
         await art.capture(page, "frames");
         if (o.saveFixture) writeFileSync(join(art.dir, "fixture-frames.html"), await page.content());
@@ -65,6 +67,8 @@ export async function status(o: StatusOptions): Promise<void> {
       }
     }
     console.log(out.join("\n"));
-    art.log(`記録先: ${art.dir}${o.saveFixture ? " (fixture-*.html は個人情報がないことを確認してから test/fixtures へ)" : ""}`);
+    art.log(
+      `記録先: ${art.dir}${o.saveFixture ? " (fixture-*.html は個人情報がないことを確認してから test/fixtures へ)" : ""}`,
+    );
   }
 }

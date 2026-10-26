@@ -64,7 +64,10 @@ describe("resolveProfiles", () => {
   it("引数が優先され、カンマ区切りも受け付ける", () => {
     const r = resolveProfiles(cfg, { patients: ["taro,hanako"] });
     expect(r.patients.map((p) => p.key)).toEqual(["taro", "hanako"]);
-    expect(resolveProfiles(cfg, { patients: ["hanako", "taro"] }).patients.map((p) => p.key)).toEqual(["hanako", "taro"]);
+    expect(resolveProfiles(cfg, { patients: ["hanako", "taro"] }).patients.map((p) => p.key)).toEqual([
+      "hanako",
+      "taro",
+    ]);
   });
 
   it("clinic が 1 つだけなら defaults がなくても選ばれる", () => {

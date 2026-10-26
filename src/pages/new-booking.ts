@@ -27,9 +27,17 @@ export interface FrameInfo {
  */
 export async function openNewBooking(page: Page, clinic: Clinic, timeoutMs = 20_000): Promise<void> {
   await page.goto(newBookingUrl(clinic), { waitUntil: "domcontentloaded" });
-  await page.locator(NEW_BOOKING.root).or(page.locator(TOP.situationRoot)).first().waitFor({ state: "visible", timeout: timeoutMs });
+  await page
+    .locator(NEW_BOOKING.root)
+    .or(page.locator(TOP.situationRoot))
+    .first()
+    .waitFor({ state: "visible", timeout: timeoutMs });
   if (!PATH.newBooking.test(pathOf(page.url()))) {
-    const status = await page.locator(TOP.nonService).first().textContent({ timeout: 2000 }).catch(() => null);
+    const status = await page
+      .locator(TOP.nonService)
+      .first()
+      .textContent({ timeout: 2000 })
+      .catch(() => null);
     throw new NotOpenError(`予約画面に入れません (TOP に戻されました${status ? `: ${status.trim()}` : ""})`);
   }
   await waitFrames(page, timeoutMs);
@@ -97,7 +105,8 @@ export async function readFrames(page: Page): Promise<FrameInfo[]> {
 
 /** 予約する枠を選ぶ純粋関数。pattern は枠名の部分一致 */
 export function chooseFrame(frames: FrameInfo[], pattern?: string): FrameInfo {
-  const describe = (fs: FrameInfo[]) => fs.map((f) => `${f.name}${f.wait ? ` ${f.wait}` : ""}${f.message ? ` (${f.message})` : ""}`).join(", ");
+  const describe = (fs: FrameInfo[]) =>
+    fs.map((f) => `${f.name}${f.wait ? ` ${f.wait}` : ""}${f.message ? ` (${f.message})` : ""}`).join(", ");
   if (frames.length === 0) throw new NotOpenError("当日の枠がありません");
   const candidates = pattern ? frames.filter((f) => f.name.includes(pattern)) : frames;
   if (candidates.length === 0) {

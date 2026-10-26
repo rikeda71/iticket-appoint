@@ -4,13 +4,28 @@ import { Artifacts } from "../browser/artifacts.js";
 import { launchBrowser } from "../browser/session.js";
 import { loadConfig, resolveProfiles } from "../config/load.js";
 import { attemptBooking, type BookResult } from "../flow/book-flow.js";
-import { AlreadyBookedError, AppError, ConfigError, FullError, GaveUpError, UnknownOutcomeError } from "../flow/errors.js";
+import {
+  AlreadyBookedError,
+  AppError,
+  ConfigError,
+  FullError,
+  GaveUpError,
+  UnknownOutcomeError,
+} from "../flow/errors.js";
 import { Ledger, localDate } from "../guard/ledger.js";
 import { acquireLock } from "../guard/lock.js";
 import { notify } from "../notify.js";
 import { businessTopUrl } from "../site/urls.js";
 import { poll } from "../wait/poller.js";
-import { formatTime, prewarmAt, resolveDeadline, resolveTarget, sleepUntil, systemClock, type Clock } from "../wait/schedule.js";
+import {
+  formatTime,
+  prewarmAt,
+  resolveDeadline,
+  resolveTarget,
+  sleepUntil,
+  systemClock,
+  type Clock,
+} from "../wait/schedule.js";
 
 export interface BookOptions {
   config: string;
@@ -116,16 +131,30 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
       log: (m) => art.log(m),
       attempt: (n) => {
         art.log(`[${n}] ${formatTime(clock.now())} 予約を試みます`);
-        return attemptBooking(b, {
-          clinic,
-          patients,
-          ...(frame ? { frame } : {}),
-          submit,
-          session: { ...cfg.browser, headless: o.headed ? false : cfg.browser.headless, ...(o.trace ? { trace: true } : {}) },
-          artifacts: art,
-          onSubmit: () =>
-            ledger.record({ date: localDate(clock.now()), clinic: clinicKey, patients: patientKeys, status: "attempted", at: new Date(clock.now()).toISOString() }),
-        }, n);
+        return attemptBooking(
+          b,
+          {
+            clinic,
+            patients,
+            ...(frame ? { frame } : {}),
+            submit,
+            session: {
+              ...cfg.browser,
+              headless: o.headed ? false : cfg.browser.headless,
+              ...(o.trace ? { trace: true } : {}),
+            },
+            artifacts: art,
+            onSubmit: () =>
+              ledger.record({
+                date: localDate(clock.now()),
+                clinic: clinicKey,
+                patients: patientKeys,
+                status: "attempted",
+                at: new Date(clock.now()).toISOString(),
+              }),
+          },
+          n,
+        );
       },
     });
 

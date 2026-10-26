@@ -24,7 +24,8 @@ afterEach(async () => {
 const html = fixture("input-form.html");
 const INPUT_PATH = "/park2/clinics/1/businesses/01/bookings/new/20261026/frames/11/input";
 const open = (mode?: string, body = html) => serveHtml(page, body, `${INPUT_PATH}${mode ? `?mode=${mode}` : ""}`);
-const submitted = () => page.evaluate(() => (window as unknown as { __submitted: Record<string, unknown> }).__submitted);
+const submitted = () =>
+  page.evaluate(() => (window as unknown as { __submitted: Record<string, unknown> }).__submitted);
 const pathNow = () => new URL(page.url()).pathname;
 
 describe("fillInputAndProceed: 入力部分", () => {
@@ -60,7 +61,11 @@ describe("fillInputAndProceed: 入力部分", () => {
 
   it("女性・新患: 性別=女性、診察券番号欄に「新患」", async () => {
     await open();
-    await fillInputAndProceed(page, [patient("hanako", { sex: "female", new_patient: true, patient_card_no: undefined })], { timeoutMs: 5000 });
+    await fillInputAndProceed(
+      page,
+      [patient("hanako", { sex: "female", new_patient: true, patient_card_no: undefined })],
+      { timeoutMs: 5000 },
+    );
     const s = (await submitted()) as Record<string, unknown>;
     expect(s["1_12_3_2_1"]).toEqual(["1"]);
     expect(s["1_16_5_1_1"]).toEqual(["新患"]);
@@ -68,7 +73,9 @@ describe("fillInputAndProceed: 入力部分", () => {
 
   it("任意項目に値がなければ空のまま送る", async () => {
     await open();
-    await fillInputAndProceed(page, [patient("taro", { name_kana: undefined, custom_fields: {} })], { timeoutMs: 5000 });
+    await fillInputAndProceed(page, [patient("taro", { name_kana: undefined, custom_fields: {} })], {
+      timeoutMs: 5000,
+    });
     const s = (await submitted()) as Record<string, unknown>;
     expect(s["1_13_8_1_0"]).toEqual([""]);
     expect(s["1_17_0_4_0"]).toEqual([""]);
@@ -114,15 +121,15 @@ describe("fillInputAndProceed: 入力部分", () => {
 
   it("select に該当する選択肢がなければ ValidationError", async () => {
     await open();
-    await expect(fillInputAndProceed(page, [patient("taro", { birth: "1850-01-02" })], { timeoutMs: 3000 })).rejects.toThrow(
-      /生年月日.*選択肢 1850 がありません/,
-    );
+    await expect(
+      fillInputAndProceed(page, [patient("taro", { birth: "1850-01-02" })], { timeoutMs: 3000 }),
+    ).rejects.toThrow(/生年月日.*選択肢 1850 がありません/);
   });
 
   it("性別の選択肢が見つからなければ MissingValueError", async () => {
     await open();
     await page.evaluate(() => {
-      for (const r of document.querySelectorAll<HTMLInputElement>('input[type=radio]')) r.value = "9";
+      for (const r of document.querySelectorAll<HTMLInputElement>("input[type=radio]")) r.value = "9";
       for (const l of document.querySelectorAll("label[for^='sex-']")) l.textContent = "不明";
     });
     await expect(fillInputAndProceed(page, [patient()], { timeoutMs: 3000 })).rejects.toThrow(MissingValueError);
@@ -130,15 +137,17 @@ describe("fillInputAndProceed: 入力部分", () => {
 
   it("必須項目に入れる値がなければ、何も入力せず MissingValueError", async () => {
     await open();
-    await expect(fillInputAndProceed(page, [patient("taro", { patient_card_no: undefined })], { timeoutMs: 3000 })).rejects.toThrow(
-      /必須項目「診察券番号」/,
-    );
+    await expect(
+      fillInputAndProceed(page, [patient("taro", { patient_card_no: undefined })], { timeoutMs: 3000 }),
+    ).rejects.toThrow(/必須項目「診察券番号」/);
     expect(await page.locator('[name="1_10_1_1_1"]').inputValue()).toBe("");
   });
 
   it("画面の人数と患者数が違えば AppError", async () => {
     await open();
-    await expect(fillInputAndProceed(page, [patient("a"), patient("b")], { timeoutMs: 3000 })).rejects.toThrow(AppError);
+    await expect(fillInputAndProceed(page, [patient("a"), patient("b")], { timeoutMs: 3000 })).rejects.toThrow(
+      AppError,
+    );
   });
 
   it("入力欄がなければ AppError", async () => {
@@ -177,9 +186,13 @@ describe("fillInputAndProceed: 送信後", () => {
   it("確認画面に進まず何も出なければ NotOpenError (タイムアウト)", async () => {
     await open();
     await page.evaluate(() => {
-      document.querySelector("div.btn-area button")!.addEventListener("click", (e) => e.stopImmediatePropagation(), true);
+      document
+        .querySelector("div.btn-area button")!
+        .addEventListener("click", (e) => e.stopImmediatePropagation(), true);
     });
-    await expect(fillInputAndProceed(page, [patient()], { timeoutMs: 800 })).rejects.toThrow(/確認画面に進めませんでした/);
+    await expect(fillInputAndProceed(page, [patient()], { timeoutMs: 800 })).rejects.toThrow(
+      /確認画面に進めませんでした/,
+    );
   });
 });
 

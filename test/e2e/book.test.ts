@@ -1,6 +1,16 @@
 import { rmSync } from "node:fs";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { artifactFiles, artifactText, assertLocalBaseUrl, configYaml, makeSandbox, MockSite, readLedger, runCli, type Sandbox } from "./helpers.js";
+import {
+  artifactFiles,
+  artifactText,
+  assertLocalBaseUrl,
+  configYaml,
+  makeSandbox,
+  MockSite,
+  readLedger,
+  runCli,
+  type Sandbox,
+} from "./helpers.js";
 
 let site: MockSite;
 let sb: Sandbox;
@@ -31,7 +41,7 @@ describe("book (E2E: モックサイト)", () => {
     expect(r.output).toContain("お試し完了");
     expect(site.bookings).toHaveLength(0);
     expect(site.bookPostCount).toBe(0);
-    expect(artifactFiles(sb).some((f) => /-confirm\.png$/.test(f))).toBe(true);
+    expect(artifactFiles(sb).some((f) => f.endsWith("-confirm.png"))).toBe(true);
     expect(readLedger(sb)).toHaveLength(0);
   });
 
@@ -47,7 +57,7 @@ describe("book (E2E: モックサイト)", () => {
     expect(r.output).toContain(`受付番号 ${b.acceptNo}`);
     const ledger = readLedger(sb);
     expect(ledger.at(-1)).toMatchObject({ clinic: "mock", patients: ["a"], status: "booked", accept_no: b.acceptNo });
-    expect(artifactFiles(sb).some((f) => /-complete\.png$/.test(f))).toBe(true);
+    expect(artifactFiles(sb).some((f) => f.endsWith("-complete.png"))).toBe(true);
   });
 
   it("ITICKET_REDACT=1: 予約はできるが、個人情報が写る画面・本文は artifacts に残らない", async () => {
@@ -55,7 +65,7 @@ describe("book (E2E: モックサイト)", () => {
     expect(r.code, r.output).toBe(0);
     expect(site.bookings).toHaveLength(1);
     const files = artifactFiles(sb);
-    expect(files.some((f) => /-frames\.png$/.test(f))).toBe(true);
+    expect(files.some((f) => f.endsWith("-frames.png"))).toBe(true);
     expect(files.some((f) => /-(confirm|complete)\.(png|html)$/.test(f))).toBe(false);
     const text = artifactText(sb) + r.output;
     for (const pii of ["テスト 一郎", "テスト一郎", "10001", "090-1111-2222", "09011112222", "1990"]) {

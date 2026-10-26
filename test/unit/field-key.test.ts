@@ -14,7 +14,13 @@ describe("parseFieldName", () => {
   });
 
   it("日付の分割項目と任意項目", () => {
-    expect(parseFieldName("1_6862_2_6_2_year")).toMatchObject({ patientIndex: 1, fieldNo: 2, inputType: 6, required: false, part: "year" });
+    expect(parseFieldName("1_6862_2_6_2_year")).toMatchObject({
+      patientIndex: 1,
+      fieldNo: 2,
+      inputType: 6,
+      required: false,
+      part: "year",
+    });
     expect(parseFieldName("1_6862_2_6_1_date")?.part).toBe("date");
   });
 

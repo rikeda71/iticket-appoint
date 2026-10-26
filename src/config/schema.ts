@@ -20,7 +20,10 @@ export const clinicSchema = z.object({
   /** 枠名 (例: "午前") の部分一致。省略時は予約可能な最初の枠 */
   frame: z.string().optional(),
   /** キャンセル可能な枠で求められる 4 桁のキャンセルコード */
-  cancel_code: z.coerce.string().regex(/^\d{4}$/, "cancel_code は 4 桁の数字です").optional(),
+  cancel_code: z.coerce
+    .string()
+    .regex(/^\d{4}$/, "cancel_code は 4 桁の数字です")
+    .optional(),
 });
 
 export const patientSchema = z.object({
@@ -28,9 +31,7 @@ export const patientSchema = z.object({
   name_kana: z.string().trim().optional(),
   patient_card_no: z.coerce.string().trim().optional(),
   birth: z.string().refine(isRealDate, "birth は実在する日付を YYYY-MM-DD で指定してください"),
-  phone: z
-    .coerce.string()
-    .refine((s) => s.replace(/\D/g, "").length >= 10, "phone は数字 10 桁以上で指定してください"),
+  phone: z.coerce.string().refine((s) => s.replace(/\D/g, "").length >= 10, "phone は数字 10 桁以上で指定してください"),
   sex: z.enum(["male", "female"]).optional(),
   new_patient: z.boolean().default(false),
   /** 医院独自の入力項目: 項目タイトル (部分一致) -> 値 */

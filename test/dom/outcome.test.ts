@@ -75,7 +75,10 @@ describe("waitOutcome", () => {
 
   it("extra のセレクタが見えたらその名前を返す", async () => {
     await run("setTimeout(() => (document.getElementById('errs').style.display = 'block'), 300)");
-    expect(await waitOutcome(page, CONFIRM, 3000, { terms: "#nothing", errors: "#errs" })).toEqual({ kind: "extra", name: "errors" });
+    expect(await waitOutcome(page, CONFIRM, 3000, { terms: "#nothing", errors: "#errs" })).toEqual({
+      kind: "extra",
+      name: "errors",
+    });
   });
 
   it("何も起きなければ timeout", async () => {

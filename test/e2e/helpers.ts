@@ -81,7 +81,13 @@ export function makeSandbox(yaml: string = configYaml()): Sandbox {
 }
 
 /** CLI を子プロセスで実行する (モックはこのプロセスで動いているので同期実行しない) */
-export function runCli(site: MockSite, sb: Sandbox, args: string[], timeoutMs = 90_000, extraEnv: NodeJS.ProcessEnv = {}): Promise<CliResult> {
+export function runCli(
+  site: MockSite,
+  sb: Sandbox,
+  args: string[],
+  timeoutMs = 90_000,
+  extraEnv: NodeJS.ProcessEnv = {},
+): Promise<CliResult> {
   assertLocalBaseUrl(site.baseUrl);
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -94,7 +100,10 @@ export function runCli(site: MockSite, sb: Sandbox, args: string[], timeoutMs = 
   delete env.NOTIFY_URL;
   delete env.ITICKET_CONFIG;
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, ["--import", "tsx", "src/cli.ts", "-c", sb.configPath, ...args], { cwd: REPO_ROOT, env });
+    const child = spawn(process.execPath, ["--import", "tsx", "src/cli.ts", "-c", sb.configPath, ...args], {
+      cwd: REPO_ROOT,
+      env,
+    });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (c: Buffer) => (stdout += c.toString("utf8")));

@@ -41,7 +41,8 @@ export const NEW_BOOKING = {
 export const INPUT = {
   form: "section.ipk-input-patient form",
   /** name 属性が `${n}_${fieldId}_${fieldNo}_${inputType}_${req}[_year|_month|_date]` の入力要素 */
-  fields: "section.ipk-input-patient form input[name], section.ipk-input-patient form select[name], section.ipk-input-patient form textarea[name]",
+  fields:
+    "section.ipk-input-patient form input[name], section.ipk-input-patient form select[name], section.ipk-input-patient form textarea[name]",
   validationErrors: "div.ipk-input-patient-error:not(.is-hidden) p",
   cancelCode: 'input[name="cancelCode"]',
   consentCheckbox: "input#consent-checkbox",
@@ -74,7 +75,7 @@ export const COMPLETE = {
 export const ERROR_MODAL = {
   root: "section.ipk-exception-error",
   body: ".ipk-exception-error-body",
-  close: 'section.ipk-exception-error .modal-btn-area button',
+  close: "section.ipk-exception-error .modal-btn-area button",
 } as const;
 
 /** サーバー全画面エラー */

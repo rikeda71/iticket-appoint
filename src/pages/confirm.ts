@@ -14,7 +14,11 @@ const toHalf = (s: string) => s.replace(/[０-９]/g, (c) => String.fromCharCode
 /** 確認画面の表示内容が設定どおりか確かめ、表示テキストを返す */
 export async function verifyConfirm(page: Page, patients: ResolvedPatient[], timeoutMs = 20_000): Promise<string> {
   await page.locator(CONFIRM.patients).first().waitFor({ state: "visible", timeout: timeoutMs });
-  const guide = await page.locator(CONFIRM.guide).first().innerText().catch(() => "");
+  const guide = await page
+    .locator(CONFIRM.guide)
+    .first()
+    .innerText()
+    .catch(() => "");
   if (!CONFIRM.notYetText.test(guide)) {
     throw new AppError(`確認画面の表示が想定と違います: ${squash(guide)}`);
   }
@@ -59,7 +63,9 @@ export async function submitConfirm(page: Page, timeoutMs = 60_000, beforeClick?
       case "transient":
         throw new UnknownOutcomeError(`予約ボタン押下後に通信エラー。予約できたか手動で確認してください: ${o.text}`);
       default:
-        throw new UnknownOutcomeError(`予約ボタン押下後にメッセージが出ました。予約状況を手動で確認してください: ${o.text}`);
+        throw new UnknownOutcomeError(
+          `予約ボタン押下後にメッセージが出ました。予約状況を手動で確認してください: ${o.text}`,
+        );
     }
   }
   throw new UnknownOutcomeError("予約ボタン押下後、完了画面に進みませんでした。予約できたか手動で確認してください");

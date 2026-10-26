@@ -46,7 +46,8 @@ export interface Resolved {
 
 /** --clinic (なければ defaults.clinic、医院が 1 つならそれ) を解決する */
 export function resolveClinic(cfg: Config, key?: string): { clinicKey: string; clinic: Clinic } {
-  const clinicKey = key ?? cfg.defaults.clinic ?? (Object.keys(cfg.clinics).length === 1 ? Object.keys(cfg.clinics)[0] : undefined);
+  const clinicKey =
+    key ?? cfg.defaults.clinic ?? (Object.keys(cfg.clinics).length === 1 ? Object.keys(cfg.clinics)[0] : undefined);
   if (!clinicKey) throw new ConfigError("--clinic を指定するか defaults.clinic を設定してください");
   const clinic = cfg.clinics[clinicKey];
   if (!clinic) throw new ConfigError(`未定義の clinic: ${clinicKey} (候補: ${Object.keys(cfg.clinics).join(", ")})`);
@@ -57,7 +58,7 @@ export function resolveClinic(cfg: Config, key?: string): { clinicKey: string; c
 export function resolveProfiles(cfg: Config, opts: { clinic?: string; patients?: string[] }): Resolved {
   const { clinicKey, clinic } = resolveClinic(cfg, opts.clinic);
 
-  const keys = (opts.patients && opts.patients.length > 0 ? opts.patients : cfg.defaults.patients ?? [])
+  const keys = (opts.patients && opts.patients.length > 0 ? opts.patients : (cfg.defaults.patients ?? []))
     .flatMap((p) => p.split(","))
     .map((p) => p.trim())
     .filter((p) => p.length > 0);

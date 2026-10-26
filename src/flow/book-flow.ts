@@ -7,7 +7,14 @@ import { closeContext, newBookingContext, type SessionOptions } from "../browser
 import { readComplete } from "../pages/complete.js";
 import { submitConfirm, verifyConfirm } from "../pages/confirm.js";
 import { fillInputAndProceed } from "../pages/input.js";
-import { chooseFrame, goToInput, openNewBooking, readFrames, selectTodayAndCount, type FrameInfo } from "../pages/new-booking.js";
+import {
+  chooseFrame,
+  goToInput,
+  openNewBooking,
+  readFrames,
+  selectTodayAndCount,
+  type FrameInfo,
+} from "../pages/new-booking.js";
 import { AlreadyBookedError, AppError, FullError, NotOpenError, UnknownOutcomeError } from "./errors.js";
 
 export interface BookParams {
@@ -67,9 +74,17 @@ export async function attemptBooking(browser: Browser, p: BookParams, attempt: n
       p.onSubmit?.();
     });
     // 完了画面に着いた時点で予約は成立している。読み取りの失敗で結果不明にしない
-    const info = await readComplete(page).catch((e: Error) => ({ text: `(完了画面の読み取りに失敗: ${e.message})` }) as Awaited<ReturnType<typeof readComplete>>);
+    const info = await readComplete(page).catch(
+      (e: Error) => ({ text: `(完了画面の読み取りに失敗: ${e.message})` }) as Awaited<ReturnType<typeof readComplete>>,
+    );
     const done = await art.capture(page, "complete", { personal: true });
-    return { kind: "booked", frame, text: info.text, ...(info.acceptNo ? { acceptNo: info.acceptNo } : {}), ...(done ? { screenshot: done } : {}) };
+    return {
+      kind: "booked",
+      frame,
+      text: info.text,
+      ...(info.acceptNo ? { acceptNo: info.acceptNo } : {}),
+      ...(done ? { screenshot: done } : {}),
+    };
   } catch (e) {
     await art.capture(page, `error-${attempt}`, { personal: st.stage !== "frames" });
     const msg = (e as Error).message.split("\n")[0];
@@ -79,7 +94,10 @@ export async function attemptBooking(browser: Browser, p: BookParams, attempt: n
       throw new UnknownOutcomeError(`予約ボタン押下後にエラー。予約できたか手動で確認してください: ${msg}`);
     }
     if (e instanceof AppError) throw e;
-    if (st.stage === "input") throw new AppError(`入力・確認画面の操作に失敗しました (画面構成が想定と違う可能性。artifacts を確認してください): ${msg}`);
+    if (st.stage === "input")
+      throw new AppError(
+        `入力・確認画面の操作に失敗しました (画面構成が想定と違う可能性。artifacts を確認してください): ${msg}`,
+      );
     throw new NotOpenError(`ブラウザ操作エラー: ${msg}`);
   } finally {
     await closeContext(ctx, p.session.trace ? join(art.dir, `trace-${attempt}.zip`) : undefined);
@@ -94,7 +112,9 @@ async function pickFrame(page: Page, pattern: string | undefined, log: (m: strin
   for (let i = 0; ; i++) {
     const frames = await readFrames(page);
     for (const f of frames) {
-      log(`  枠: ${f.name} ${f.wait} ${f.bookable ? "○予約可" : "×"}${f.outOfPeriod ? " (時間外)" : ""}${f.message ? ` ${f.message}` : ""}`);
+      log(
+        `  枠: ${f.name} ${f.wait} ${f.bookable ? "○予約可" : "×"}${f.outOfPeriod ? " (時間外)" : ""}${f.message ? ` ${f.message}` : ""}`,
+      );
     }
     try {
       return chooseFrame(frames, pattern);
