@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "cli": "tsx src/cli.ts",
+    "mock": "tsx scripts/mock.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",

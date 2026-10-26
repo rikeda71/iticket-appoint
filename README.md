@@ -42,6 +42,40 @@ pnpm cli book --patient taro --patient hanako --submit
 pnpm cli book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
 ```
 
+### 患者の選び方
+
+`config.yaml` には家族全員を `patients` に登録しておき、予約するたびに `--patient` で選びます。1 人だけ予約するために config を分ける必要はありません。
+
+- `--patient taro` → taro だけ (1 人分の予約)
+- `--patient taro --patient hanako` または `--patient taro,hanako` → 2 人まとめて (人数 2 で 1 回の予約)
+- 省略 → `defaults.patients` の人たち
+
+Actions では「予約する」の `patients` 入力に `taro` や `taro,hanako` と書きます。
+
+### お試し (dry-run) と本番
+
+|         | お試し (既定)                                                        | 本番                                                    |
+| ------- | -------------------------------------------------------------------- | ------------------------------------------------------- |
+| 指定    | `--submit` を付けない                                                | `--submit` (対話で y、または `--yes`)                   |
+| Actions | `submit` をオフ                                                      | `submit` をオン                                         |
+| 動き    | 枠を選び、入力して確認画面まで進み、**「予約する」を押さずに止まる** | 確認画面の内容を照合してから「予約する」を 1 回だけ押す |
+| 記録    | 予約記録 (ledger) は残さない。何度でも実行できる                     | 押す直前に記録し、同じ日・同じ患者の再実行を止める      |
+
+おすすめの流れ: まず `pnpm mock` (下記) でダミーの画面に対する動きを確かめ、受付時間中に一度実サイトでお試しをして確認画面まで進むことを確かめ (`--headed` で画面を見られます)、予約したい日は本番で実行します。お試しも実際のサイトを操作します (予約はされません)。
+
+### ダミーの画面で試す (`pnpm mock`)
+
+実サイトにはアクセスせず、手元で起動するダミーの予約サイト (E2E テスト用のモック) とダミー患者 `a` / `b` で `book` を実行します。`book` のオプションをそのまま渡せます。
+
+```sh
+pnpm mock                          # 患者 a でお試し (確認画面で止まる)
+pnpm mock --patient a,b --headed   # 2 人・ブラウザ表示
+pnpm mock --submit --yes           # モック相手に「予約する」まで押す
+pnpm mock --serve                  # モックサイトだけ起動 (Ctrl-C で終了)
+```
+
+スクリーンショット等は `artifacts/mock/` に保存されます。予約記録は毎回使い捨てなので、何度でも実行できます。
+
 主なオプション (`pnpm cli book --help` で全部):
 
 | オプション                                 | 説明                                                              |
@@ -60,7 +94,7 @@ pnpm cli book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
 
 ## GitHub Actions で使う (スマホから実行)
 
-1. このリポジトリを **private** で GitHub に置く。一緒に使う人は collaborator (Write 権限) として招待する (workflow の手動実行には Write 権限が必要)。
+1. このリポジトリを fork するか、自分の GitHub に置く。一緒に使う人は collaborator (Write 権限) として招待する (workflow の手動実行には Write 権限が必要)。
 2. Settings → Secrets and variables → Actions に登録:
    - `CONFIG_YAML`: `config.yaml` の中身全文
    - `NOTIFY_URL` (任意): 結果の通知先。[ntfy](https://ntfy.sh/) の推測されにくいトピック URL (例 `https://ntfy.sh/iticket-xxxxxxxx`) か Discord の webhook URL。ntfy ならスマホに ntfy アプリを入れて同じトピックを購読する。
@@ -74,7 +108,7 @@ pnpm cli book --patient taro --submit --yes --wait-until 09:00 --deadline 09:30
 
 注意: このリポジトリは public なので、Actions のログと Artifacts は誰でも見られます。ログには患者のキー (taro など)・医院名・枠名が出ます (キーに本名を使わないでください)。`book.yml` では `ITICKET_REDACT=1` を設定しており、入力内容が写る画面 (入力・確認・完了・入力後のエラー) のスクリーンショット/HTML と確認画面の本文は Artifacts に保存しません。そのため、確認画面の中身は通知とログ (「確認画面に到達しました」) でしか確かめられません。画面を見たいときはローカルで `--headed` を付けて実行してください。
 
-毎朝自動で予約したい場合は `.github/workflows/book.yml` の `schedule` のコメントを外します (cron は UTC・遅延があるので受付開始の 30 分前程度に起動)。無料枠は private リポジトリで月 2000 分です。
+毎朝自動で予約したい場合は `.github/workflows/book.yml` の `schedule` のコメントを外します (cron は UTC・遅延があるので受付開始の 30 分前程度に起動)。public リポジトリなら Actions の実行時間は無料です (private にすると無料枠は月 2000 分)。
 
 ## 開発
 
