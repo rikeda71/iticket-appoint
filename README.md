@@ -80,6 +80,7 @@ npm run cli -- book --patient taro --submit --yes --wait-until 09:00 --deadline 
 
 ```sh
 npm test            # unit + DOM テスト (DOM テストはローカルの Chromium を使用)
+npm run test:e2e    # モックサイトに対する E2E (CLI を子プロセスで実行。30 秒ほどかかる)
 npm run typecheck
 ```
 
