@@ -4,7 +4,8 @@ import type { AddressInfo } from "node:net";
 
 /**
  * アイチケット広場の予約フローを模したモックサイト (外部ネットワーク不要)。
- * 実サイトと同じ URL 構造で、受付時間外の /bookings/new は TOP へ 307 で戻す。
+ * 実サイトと同じ URL 構造で、/bookings/new を直接開くと受付中でも TOP へ 307 で戻す。
+ * 予約画面へは TOP の読み込み (hydration) 後に「予約へ」を押したときだけ SPA 内の遷移で入れる。
  * 状態 (open / frames / bookResponse ...) はテストからプロパティで制御する。
  */
 
@@ -83,8 +84,12 @@ export class MockSite {
   bookings: MockBooking[] = [];
   /** POST /mock/api/book の回数 (応答の種類に関わらず数える) */
   bookPostCount = 0;
-  /** GET /bookings/new (リダイレクトされたものを含む) の回数 */
+  /** 予約画面に入ろうとした回数 (「予約へ」による SPA 内遷移と、/bookings/new の直接 GET の合計) */
   newBookingAccessCount = 0;
+  /** /bookings/new の直接 GET (常に TOP へ 307) の回数 */
+  directNewBookingCount = 0;
+  /** TOP を開いてから「予約へ」が SPA 内遷移になるまでの時間 (ms)。それより前に押すと通常のリンクとして直接 GET になる */
+  hydrationDelayMs = 0;
 
   private server: Server;
   private port = 0;
@@ -121,6 +126,8 @@ export class MockSite {
     this.bookings = [];
     this.bookPostCount = 0;
     this.newBookingAccessCount = 0;
+    this.directNewBookingCount = 0;
+    this.hydrationDelayMs = 0;
   }
 
   async stop(): Promise<void> {
@@ -158,6 +165,12 @@ export class MockSite {
       json(res, 200, { date: localDate8(), frames: this.isOpen ? this.frames : [], form: this.formDef() });
       return;
     }
+    if (req.method === "POST" && path === "/mock/api/enter") {
+      // 「予約へ」の SPA 内遷移 (実サイトでは RSC の取得)。受付時間外なら TOP に留まる
+      this.newBookingAccessCount++;
+      json(res, 200, { open: this.isOpen });
+      return;
+    }
     if (req.method === "POST" && path === "/mock/api/book") {
       await this.handleBook(req, res);
       return;
@@ -172,16 +185,14 @@ export class MockSite {
     const top = m[1]!;
     const sub = m[2];
     if (sub === undefined) {
-      this.html(res, topPage(top, this.isOpen));
+      this.html(res, topPage(top, this.isOpen, this.hydrationDelayMs));
       return;
     }
     if (sub === "/bookings/new") {
       this.newBookingAccessCount++;
-      if (this.isOpen) this.html(res, shell());
-      else this.redirect(res, top);
-      return;
+      this.directNewBookingCount++;
     }
-    // 入力・確認・完了画面は SPA 内の遷移でのみ到達できる (直接開くと TOP に戻す)
+    // 予約画面 (枠一覧・入力・確認・完了) は SPA 内の遷移でのみ到達できる (直接開くと受付中でも TOP に戻す)
     this.redirect(res, top);
   }
 
@@ -239,23 +250,20 @@ export class MockSite {
 // 保存される html / png を読みやすくするための最小限の見た目。表示・非表示を決めるのは .is-hidden だけ
 const STYLE = `<style>${readFileSync(new URL("./style.css", import.meta.url), "utf8")}</style>`;
 
-function topPage(top: string, open: boolean): string {
+function topPage(top: string, open: boolean, hydrationDelayMs: number): string {
   const status = open
-    ? `<div class="ipk-view-situation-body"><ul class="panel"><li>現在 3人 待ち</li></ul></div>`
-    : `<div class="ipk-view-situation-body"><ul class="panel"><li><section class="ipk-non-service"><p>診察時間外</p></section></li></ul></div>`;
+    ? `<section class="ipk-wait-situation-j"><div class="ipk-wait-situation-timezone">午前</div><div class="ipk-wait-situation-main-j"><dl class="ipk-wait-situation-wait-patient"><dt class="ipk-wait-situation-title">待ち人数</dt><dd class="ipk-wait-situation-body">3<span>人</span></dd></dl></div></section>`
+    : `<section class="ipk-non-service"><p>診察時間外</p></section>`;
+  // 実サイト同様、時間外でも「予約へ」は表示される
   return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>モック医院</title>${STYLE}</head><body>
-<div class="ipk-l-main-contents"><div class="business-top-j">
+<div class="ipk-l-main-contents" id="app"><div class="business-top-j">
 <section class="ipk-page-title"><h1 class="ipk-page-title-main">モック医院</h1><h2 class="ipk-page-title-sub">診察</h2></section>
-<section class="ipk-view-situation-j">${status}</section>
-<section class="ipk-gmtp-to-book"><a href="${top}/bookings/new">予約へ</a></section>
-</div></div></body></html>`;
-}
-
-/** /bookings/new の SPA シェル。以降の画面遷移は client.js が pushState で行う */
-function shell(): string {
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>モック予約</title>${STYLE}</head><body>
-<div class="ipk-l-main-contents" id="app"></div>
+<section class="ipk-view-situation-j"><div class="ipk-view-situation-body"><ul class="panel"><li>
+${status}
+<section class="ipk-gmtp-to-book"><div class="ipk-wrap-primary-link"><a href="${top}/bookings/new"><div class="ipk-primary-btn-add-arrow">予約へ</div></a></div></section>
+</li></ul></div></section>
+</div></div>
 <section class="ipk-exception-error" style="display:none"><div class="ipk-exception-error-body"></div><div class="modal-btn-area"><button type="button">閉じる</button></div></section>
-<script src="/mock/client.js"></script>
+<script src="/mock/client.js" data-hydration-ms="${hydrationDelayMs}"></script>
 </body></html>`;
 }

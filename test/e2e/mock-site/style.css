@@ -1,5 +1,5 @@
 .is-hidden {
-  display: none;
+  display: none !important;
 }
 body {
   margin: 0;
@@ -33,10 +33,19 @@ section {
   margin-bottom: 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
-.ipk-view-situation-j ul {
+.ipk-view-situation-j ul,
+.ipk-time-list-j ul,
+.ipk-request-date ul,
+.ipk-confirm-patient ul {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+section section {
+  box-shadow: none;
+  padding: 0;
+}
+.ipk-wait-situation-body {
   font-size: 18px;
   font-weight: bold;
 }
@@ -55,8 +64,13 @@ section {
   text-decoration: none;
   font-weight: bold;
 }
+h1 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
 select,
 input[type="text"],
+input[type="tel"],
 textarea {
   font-size: 16px;
   padding: 6px 8px;
@@ -65,19 +79,30 @@ textarea {
   background: #fff;
 }
 .ipk-time-list-j > div {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
   padding: 12px 0;
   border-bottom: 1px solid #eee;
 }
 .ipk-time-list-j > div:last-child {
   border-bottom: 0;
 }
-.ipk-time-list-j .timezone {
-  flex: 1 1 140px;
-  font-weight: bold;
+.timeframe {
+  margin-left: 8px;
+  font-weight: normal;
+}
+.ipk-bookable-time {
+  color: #666;
+}
+.ipk-time-list-one-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.ipk-wrap-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .ipk-time-list-wait {
   color: #1e88c8;
@@ -87,6 +112,18 @@ textarea {
 .ipk-time-list-message {
   color: #999;
   margin: 0;
+}
+.pure-button {
+  display: inline-block;
+  background: #e0e0e0;
+  color: #333;
+  border: 0;
+  border-radius: 6px;
+  padding: 10px 24px;
+  margin: 0 4px;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
 }
 .ipk-primary-btn {
   background: #1e88c8;
@@ -98,27 +135,71 @@ textarea {
   font-weight: bold;
   cursor: pointer;
 }
-.ipk-input-patient h3 {
+.ipk-input-patient h2,
+.ipk-confirm-patient h2 {
+  font-size: 16px;
   border-left: 4px solid #1e88c8;
   padding-left: 8px;
   margin: 16px 0 8px;
 }
 .ipk-one-item {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 8px;
   margin-bottom: 12px;
 }
-.ipk-one-item > label {
-  flex: 0 0 100%;
+.ipk-one-item label {
+  display: block;
   font-weight: bold;
 }
-.ipk-one-item > input,
-.ipk-one-item > textarea {
-  flex: 1 1 100%;
+.ipk-one-item input,
+.ipk-one-item textarea {
+  box-sizing: border-box;
+  width: 100%;
 }
-.ipk-one-item > textarea {
+.ipk-one-item textarea {
   min-height: 60px;
+}
+.ipk-one-item > div[class^="pure-u-"] {
+  display: inline-block;
+  margin-right: 8px;
+}
+.ipk-input-patient-note,
+.ipk-confirm-patient-note {
+  color: #888;
+  font-size: 12px;
+}
+/* 実サイト同様、チェックボックス本体は非表示で label (高さ 0) の疑似要素で描く */
+#consent-checkbox {
+  display: none;
+}
+.checkbox-wrapper {
+  display: inline-block;
+  vertical-align: middle;
+  width: 24px;
+}
+.checkbox-wrapper label.pure-checkbox {
+  display: block;
+  position: relative;
+  height: 0;
+}
+.checkbox-wrapper label.pure-checkbox::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid #1e88c8;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+#consent-checkbox:checked + label.pure-checkbox::before {
+  background: #1e88c8;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+.consent-body p {
+  display: inline;
+  margin: 0;
 }
 .ipk-must-txt {
   background: #c62828;
@@ -155,24 +236,22 @@ textarea {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   z-index: 10;
 }
-.ipk-guide p {
+.ipk-guide p,
+.ipk-guide em {
   color: #c62828;
   font-weight: bold;
   margin: 0;
 }
-.ipk-confirm-patient > div + div {
+.ipk-confirm-patient [id^="ipk-input-patient-confirm-form-"] + [id^="ipk-input-patient-confirm-form-"] {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px dashed #ccc;
 }
-.ipk-confirm-patient-item {
-  display: flex;
-  gap: 16px;
+.ipk-confirm-patient li {
   padding: 6px 0;
   border-bottom: 1px solid #eee;
 }
-.ipk-confirm-patient-item > span:first-child {
-  flex: 0 0 100px;
+.ipk-confirm-patient-item {
   color: #666;
 }
 .ipk-confirm-patient-data {
@@ -181,4 +260,11 @@ textarea {
 .ipk-complete {
   text-align: center;
   font-size: 18px;
+}
+.ipk-select-book-num h2 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+dd {
+  margin: 0;
 }

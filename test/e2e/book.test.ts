@@ -45,6 +45,29 @@ describe("book (E2E: モックサイト)", () => {
     expect(readLedger(sb)).toHaveLength(0);
   });
 
+  it("モックも実サイト同様、/bookings/new を直接開くと受付中でも TOP へ 307 で戻す", async () => {
+    const top = `${site.baseUrl}/clinics/1/businesses/01`;
+    const res = await fetch(`${top}/bookings/new`, { redirect: "manual" });
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(new URL(top).pathname);
+    expect(site.directNewBookingCount).toBe(1);
+  });
+
+  it("「予約へ」は SPA 内遷移で押す (直接 GET しない)。hydration 前に押して TOP に戻されたら 1 回だけ押し直す", async () => {
+    const r = await runCli(site, sb, ["book"]);
+    expect(r.code, r.output).toBe(0);
+    expect(site.directNewBookingCount).toBe(0);
+    expect(site.newBookingAccessCount).toBe(1);
+
+    site.reset();
+    site.hydrationDelayMs = 1000;
+    const slow = await runCli(site, sb, ["book"]);
+    expect(slow.code, slow.output).toBe(0);
+    expect(slow.output).toContain("確認画面に到達しました");
+    expect(site.directNewBookingCount).toBe(1);
+    expect(site.newBookingAccessCount).toBe(2);
+  });
+
   it("本番 --submit --yes: 設定どおりの内容で 1 件予約され、受付番号がログに出て ledger に booked が残る", async () => {
     const r = await runCli(site, sb, SUBMIT);
     expect(r.code, r.output).toBe(0);
