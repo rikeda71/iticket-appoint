@@ -171,7 +171,10 @@ export async function fillInputAndProceed(
 
   const consent = page.locator(INPUT.consentCheckbox);
   if ((await consent.count()) > 0 && !(await consent.isChecked())) {
-    await consent.check({ force: true }).catch(() => page.locator(INPUT.consentLabel).click());
+    // 実サイトは checkbox が display:none・label が高さ 0 (疑似要素で描画) で、通常のクリックができない
+    await consent.check({ force: true, timeout: 2000 }).catch(() => undefined);
+    if (!(await consent.isChecked())) await page.locator(INPUT.consentLabel).first().dispatchEvent("click");
+    if (!(await consent.isChecked())) await consent.evaluate((e) => (e as HTMLInputElement).click());
   }
 
   await page.locator(INPUT.submit).first().click();

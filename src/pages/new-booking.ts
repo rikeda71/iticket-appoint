@@ -2,7 +2,7 @@ import type { Page } from "playwright";
 import type { Clinic } from "../config/schema.js";
 import { FullError, NotOpenError, ValidationError } from "../flow/errors.js";
 import { NEW_BOOKING, TOP } from "../site/selectors.js";
-import { newBookingUrl, PATH, pathOf } from "../site/urls.js";
+import { businessTopUrl, newBookingUrl, PATH, pathOf } from "../site/urls.js";
 import { squash } from "./business-top.js";
 import { modalError } from "./modal.js";
 import { waitOutcome } from "./outcome.js";
@@ -22,11 +22,21 @@ export interface FrameInfo {
 }
 
 /**
- * /bookings/new を開く。受付時間外はビジネス TOP に戻されるので NotOpenError。
+ * ビジネス TOP の「予約へ」から /bookings/new に入る。受付時間外はビジネス TOP に戻されるので NotOpenError。
  * 当日枠一覧が出るまで待つ。
+ * 実サイトは /bookings/new を直接開くと受付中でも 307 で TOP に戻す (SPA 内遷移でのみ入れる) ため、
+ * TOP の読み込み (hydration) を待ってからリンクを押す。リンクがなければ直接開く。
  */
 export async function openNewBooking(page: Page, clinic: Clinic, timeoutMs = 20_000): Promise<void> {
-  await page.goto(newBookingUrl(clinic), { waitUntil: "domcontentloaded" });
+  await page.goto(businessTopUrl(clinic), { waitUntil: "load" });
+  const link = page.locator(TOP.bookLink).first();
+  const hasLink = await link
+    .waitFor({ state: "visible", timeout: Math.min(timeoutMs, 5000) })
+    .then(() => true)
+    .catch(() => false);
+  if (hasLink) await link.click();
+  else await page.goto(newBookingUrl(clinic), { waitUntil: "domcontentloaded" });
+  await page.waitForURL((u) => PATH.newBooking.test(u.pathname), { timeout: 5000 }).catch(() => undefined);
   await page
     .locator(NEW_BOOKING.root)
     .or(page.locator(TOP.situationRoot))
