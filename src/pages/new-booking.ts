@@ -1,4 +1,4 @@
-import type { Page } from "playwright";
+import type { Locator, Page, Request } from "playwright";
 import type { Clinic } from "../config/schema.js";
 import { FullError, NotOpenError, ValidationError } from "../flow/errors.js";
 import { NEW_BOOKING, TOP } from "../site/selectors.js";
@@ -34,9 +34,11 @@ export async function openNewBooking(page: Page, clinic: Clinic, timeoutMs = 20_
     .waitFor({ state: "visible", timeout: Math.min(timeoutMs, 5000) })
     .then(() => true)
     .catch(() => false);
-  if (hasLink) await link.click();
-  else await page.goto(newBookingUrl(clinic), { waitUntil: "domcontentloaded" });
-  await page.waitForURL((u) => PATH.newBooking.test(u.pathname), { timeout: 5000 }).catch(() => undefined);
+  if (hasLink) await clickBookLink(page, link);
+  else {
+    await page.goto(newBookingUrl(clinic), { waitUntil: "domcontentloaded" });
+    await page.waitForURL((u) => PATH.newBooking.test(u.pathname), { timeout: 5000 }).catch(() => undefined);
+  }
   await page
     .locator(NEW_BOOKING.root)
     .or(page.locator(TOP.situationRoot))
@@ -51,6 +53,40 @@ export async function openNewBooking(page: Page, clinic: Clinic, timeoutMs = 20_
     throw new NotOpenError(`予約画面に入れません (TOP に戻されました${status ? `: ${status.trim()}` : ""})`);
   }
   await waitFrames(page, timeoutMs);
+}
+
+/**
+ * 「予約へ」を押して SPA 内遷移を待つ。hydration 前に押すと通常のリンクとして /bookings/new を直接開き、
+ * TOP に戻される (受付中でも)。そうなったら TOP の読み込みを待って 1 回だけ押し直す。
+ * 時間外の表示 (TOP.nonService) があるときは押し直さない。
+ */
+async function clickBookLink(page: Page, link: Locator): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    let direct = false;
+    const onRequest = (r: Request) => {
+      if (r.isNavigationRequest() && r.frame() === page.mainFrame() && PATH.newBooking.test(pathOf(r.url()))) {
+        direct = true;
+      }
+    };
+    page.on("request", onRequest);
+    try {
+      await link.click();
+      await page
+        .waitForURL((u) => PATH.newBooking.test(u.pathname) || direct, { timeout: 5000 })
+        .catch(() => undefined);
+    } finally {
+      page.off("request", onRequest);
+    }
+    if (attempt >= 2 || !direct) return;
+    await page.waitForLoadState("load").catch(() => undefined);
+    if (PATH.newBooking.test(pathOf(page.url())) || (await page.locator(TOP.nonService).count()) > 0) return;
+    const visible = await link
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!visible) return;
+    await page.waitForTimeout(2000);
+  }
 }
 
 async function waitFrames(page: Page, timeoutMs: number): Promise<void> {

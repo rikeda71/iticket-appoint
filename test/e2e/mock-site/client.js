@@ -1,9 +1,11 @@
 // モックサイトのクライアント JS (ブラウザで実行される)。
-// 実サイト (Next.js SPA) 同様、history.pushState で 枠一覧 → 入力 → 確認 → 完了 を切り替える。
-// DOM は src/site/selectors.ts のセレクタ・入力欄 name 規則に合わせた合成物 (個人情報なし)。
+// 実サイト (Next.js SPA) 同様、TOP の「予約へ」から history.pushState で 枠一覧 → 入力 → 確認 → 完了 を切り替える。
+// hydration (data-hydration-ms) 前の「予約へ」は通常のリンクとして /bookings/new を直接開き、サーバーに TOP へ戻される。
+// DOM は 2026-10 に実サイトで保存した HTML の構造に合わせた合成物 (個人情報なし)。
 (() => {
   "use strict";
-  const topPath = location.pathname.replace(/\/bookings\/.*$/, "");
+  const script = document.currentScript;
+  const topPath = location.pathname.replace(/\/bookings\/.*$/, "").replace(/\/$/, "");
   const newPath = `${topPath}/bookings/new`;
   const app = document.getElementById("app");
   const st = { count: 1, date: "", frame: null, form: [], values: {} };
@@ -21,16 +23,48 @@
     $("section.ipk-exception-error").style.display = "none";
   });
 
+  // ---- TOP ----
+  function hydrateTop() {
+    const link = $("section.ipk-gmtp-to-book a");
+    if (!link) return;
+    link.addEventListener("click", async (e) => {
+      e.preventDefault();
+      // 実サイトでは RSC の取得。受付時間外は TOP に留まる
+      const res = await fetch("/mock/api/enter", { method: "POST" });
+      const data = await res.json();
+      if (!data.open) return;
+      history.pushState(null, "", newPath);
+      renderFramesScreen();
+    });
+  }
+
+  // ---- 共通 ----
+  const WEEK = "日月火水木金土";
+  function dateLabel(d8) {
+    const [y, m, d] = [Number(d8.slice(0, 4)), Number(d8.slice(4, 6)), Number(d8.slice(6, 8))];
+    return `${y}年${m}月${d}日（${WEEK[new Date(y, m - 1, d).getDay()]}）`;
+  }
+  const period = (f) => f.range.replace(/[()]/g, "");
+  const timezone = (f) => `<span class="timezone">${esc(f.name)}<span class="timeframe">${esc(f.range)}</span></span>`;
+
+  function requestDateHtml() {
+    const f = st.frame;
+    return `<section class="ipk-request-date"><h1 class="ipk-request-date-title-j">受診希望日時</h1><ul>
+      <li>${esc(dateLabel(st.date))}</li><li>${timezone(f)}</li>
+      <li class="ipk-bookable-time ">予約可能時間 /<span class="period">${esc(period(f))}</span></li></ul></section>`;
+  }
+
   // ---- 枠一覧 ----
   function renderFramesScreen() {
     const opts = [1, 2, 3, 4, 5]
-      .map((n) => `<option value="${n}"${n === st.count ? " selected" : ""}>${n}人</option>`)
+      .map((n) => `<option value="${n}"${n === st.count ? " selected" : ""}>${n}</option>`)
       .join("");
     app.innerHTML = `
-      <section class="ipk-date-select"><input type="radio" id="today" checked><label for="today">本日</label></section>
-      <section class="ipk-select-book-num"><select>${opts}</select></section>
-      <section class="ipk-non-time-frame is-hidden"><p>現在、予約可能な時間ではありません。</p></section>
-      <section class="ipk-time-list-j"></section>`;
+      <section class="ipk-date-select"><h1 class="ipk-date-select-title-j">受診希望日時</h1><form class="pure-form">
+        <div class=""><section class="ipk-select-book-num"><h2>予約人数</h2><div class="ipk-select-book-num-body"><select>${opts}</select><span>人</span></div></section></div>
+        <div><section class="ipk-non-time-frame is-hidden"><p>現在、予約可能な時間ではありません。</p></section><section class="ipk-time-list-j"></section></div>
+      </form></section>
+      <section class="ipk-back-btn-l"><div class="btn-area"><a class="pure-button" href="${esc(topPath)}">戻る</a></div></section>`;
     $("section.ipk-select-book-num select").addEventListener("change", (e) => {
       st.count = Number(e.target.value);
       loadFrames();
@@ -54,18 +88,25 @@
       .map((f) => {
         const ok = f.status === "ok";
         const oop = f.status === "out-of-period";
+        const mark = ok ? "○" : "×";
         return `<div data-id="${esc(f.id)}">
-          <span class="timezone">${esc(f.name)}<br>${esc(f.range)}</span>
-          <span class="ipk-time-list-wait">${esc(f.wait)}</span>
-          ${oop ? '<div class="ipk-bookable-time is-out-of-period">予約可能時間外</div>' : `<p class="ipk-time-list-message${ok ? " is-hidden" : ""}">満員のため受付を終了しました</p>`}
-          <button type="button" class="ipk-primary-btn${ok ? "" : " is-hidden"}">次へ</button>
+          <h1>${timezone(f)}</h1>
+          <div class="ipk-bookable-time ${oop ? "is-out-of-period" : ""}">予約可能時間 /<span class="period">${esc(period(f))}</span></div>
+          <ul><li>
+            <div class="ipk-time-list-one-item">
+              <div class="ipk-wrap-status"><div class="ipk-time-list-status">${mark}</div><div class="ipk-time-list-timeframe"><span class="ipk-time-list-wait">${esc(f.wait)}</span></div></div>
+              <div class="ipk-wrap-button"><button type="button" class="ipk-primary-btn pure-button ${ok ? "" : "is-hidden"}">次へ</button></div>
+            </div>
+            <p class="ipk-time-list-message${ok || oop ? " is-hidden" : ""}">空き枠がないため、予約できません。</p>
+          </li></ul>
         </div>`;
       })
       .join("");
     list.querySelectorAll("button.ipk-primary-btn").forEach((b) => {
       b.addEventListener("click", () => {
-        const id = b.parentElement.dataset.id;
+        const id = b.closest("[data-id]").dataset.id;
         st.frame = data.frames.find((f) => f.id === id);
+        st.values = {};
         history.pushState(null, "", `${newPath}/${st.date}/frames/${id}/input`);
         renderInput();
       });
@@ -75,39 +116,70 @@
   // ---- 入力 ----
   const nameOf = (n, f, part) =>
     `${n}_${f.fieldId}_${f.fieldNo}_${f.inputType}_${f.required ? 1 : 0}${part ? `_${part}` : ""}`;
-  const must = (f) => (f.required ? '<span class="ipk-must-txt">必須</span>' : "");
+  const must = (f) => (f.required ? '<span class="ipk-must-txt ">（必須）</span>' : "");
+  const note = (f) => `<div class="ipk-input-patient-note">${esc(f.title)}を記入</div>`;
+
+  function era(y) {
+    if (y >= 2019) return `令和${y === 2019 ? "元" : y - 2018}`;
+    if (y >= 1989) return `平成${y === 1989 ? "元" : y - 1988}`;
+    return `昭和${y - 1925}`;
+  }
 
   function fieldHtml(n, f) {
     if (f.inputType === 5) {
       const year = new Date().getFullYear();
-      const sel = (part, items) =>
-        `<select name="${nameOf(n, f, part)}"><option value="">--</option>${items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select>`;
-      const years = Array.from({ length: 100 }, (_, i) => [year - i, `${year - i}年`]);
+      const sel = (part, cls, empty, items) =>
+        `<select class="${cls}" name="${nameOf(n, f, part)}"><option value="">${empty}</option>${items.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select>`;
+      const years = Array.from({ length: 100 }, (_, i) => [year - i, `${year - i}（${era(year - i)}）年`]);
       const months = Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1}月`]);
       const dates = Array.from({ length: 31 }, (_, i) => [i + 1, `${i + 1}日`]);
-      return `<div class="ipk-one-item"><label>${esc(f.title)}${must(f)}</label>${sel("year", years)}${sel("month", months)}${sel("date", dates)}</div>`;
+      return `<div class="one-item ipk-one-item"><label>${esc(f.title)}${must(f)}</label>
+        <div class="pure-u-1-1">${sel("year", "pure-u-1-1", "--年", years)}</div>
+        <div class="pure-u-1-2">${sel("month", "pure-u-11-12", "--月", months)}</div>
+        <div class="pure-u-1-2">${sel("date", "pure-u-1-1", "--日", dates)}</div>${note(f)}</div>`;
     }
+    const name = nameOf(n, f);
     const control =
-      f.inputType === 4 ? `<textarea name="${nameOf(n, f)}"></textarea>` : `<input type="text" name="${nameOf(n, f)}">`;
-    return `<div class="ipk-one-item"><label>${esc(f.title)}${must(f)}</label>${control}</div>`;
+      f.inputType === 4
+        ? `<textarea placeholder="${esc(f.title)}" id="${name}" name="${name}"></textarea>`
+        : `<input placeholder="${esc(f.title)}" id="${name}" type="${f.fieldNo === 4 ? "tel" : "text"}" name="${name}">`;
+    return `<div class="ipk-one-item"><div class="pure-g"><div class="pure-u-1-1"><label for="${name}">${esc(f.title)}${must(f)}</label>${control}</div></div>${note(f)}</div>`;
   }
 
   function renderInput() {
     const blocks = Array.from(
       { length: st.count },
-      (_, i) => `<h3>${i + 1}人目</h3>${st.form.map((f) => fieldHtml(i + 1, f)).join("")}`,
+      (_, i) =>
+        `<div id="ipk-input-patient-input-form-${i + 1}"><h2>${i + 1}人目</h2>${st.form.map((f) => fieldHtml(i + 1, f)).join("")}</div>`,
     ).join("");
     app.innerHTML = `
-      <section class="ipk-input-patient">
-        <div class="ipk-input-patient-error is-hidden"></div>
-        <form onsubmit="return false">
+      ${requestDateHtml()}
+      <section class="ipk-guide"><p class="ipk-guide-message-center">受診される方の情報を入力してください。</p></section>
+      <section class="ipk-input-patient"><h1 class="ipk-input-patient-title">受診者情報入力</h1>
+        <form class="pure-form pure-form-stacked">
+          <div class="ipk-input-patient-error is-hidden"></div>
           ${blocks}
-          <div><input type="checkbox" id="consent-checkbox"><label for="consent-checkbox">利用規約に同意する</label></div>
-          <div class="btn-area"><button type="button" class="ipk-primary-btn">次へ</button></div>
+          <section class="ipk-consent"><div class="consent-body">
+            <div class="checkbox-wrapper"><input id="consent-checkbox" type="checkbox"><label for="consent-checkbox" class="pure-checkbox"></label></div>
+            <p><a href="#">「利用規約」</a>および<a href="#">「プライバシーポリシー」</a>に同意する</p>
+          </div></section>
+          <div class="btn-area"><button type="submit" class="pure-button">戻る</button><button type="submit" class="ipk-primary-btn pure-button">次へ</button></div>
         </form>
       </section>
       <section class="ipk-privacy-policy-modal is-hidden"><p>利用規約に同意しますか</p><button type="button" class="ipk-primary-btn">はい</button></section>`;
-    $("section.ipk-input-patient div.btn-area button").addEventListener("click", onNext);
+    for (const [k, v] of Object.entries(st.values)) {
+      const el = document.querySelector(`section.ipk-input-patient form [name="${k}"]`);
+      if (el) el.value = v;
+    }
+    $("section.ipk-input-patient form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (e.submitter && !e.submitter.classList.contains("ipk-primary-btn")) {
+        history.pushState(null, "", newPath);
+        renderFramesScreen();
+        return;
+      }
+      onNext();
+    });
     $("section.ipk-privacy-policy-modal button").addEventListener("click", goConfirm);
   }
 
@@ -157,7 +229,7 @@
   function display(n, f) {
     if (f.inputType === 5) {
       const g = (p) => st.values[nameOf(n, f, p)];
-      return `${g("year")}年${g("month")}月${g("date")}日`;
+      return `${g("year")}（${era(Number(g("year")))}）年${g("month")}月${g("date")}日`;
     }
     return st.values[nameOf(n, f)] ?? "";
   }
@@ -168,15 +240,25 @@
       const items = st.form
         .map(
           (f) =>
-            `<div class="ipk-confirm-patient-item"><span>${esc(f.title)}</span><span class="ipk-confirm-patient-data">${esc(display(n, f))}</span></div>`,
+            `<li><div class="ipk-confirm-patient-item">${esc(f.title)}${f.required ? '<span class="ipk-must-txt">（必須）</span>' : ""}</div><div class="ipk-confirm-patient-data">${esc(display(n, f))}</div><div class="ipk-confirm-patient-note">${esc(f.title)}を記入</div></li>`,
         )
         .join("");
-      return `<div id="ipk-input-patient-confirm-form-${n}">${items}</div>`;
+      return `<div id="ipk-input-patient-confirm-form-${n}"><h2>${n}人目</h2><ul>${items}</ul></div>`;
     }).join("");
     app.innerHTML = `
-      <section class="ipk-guide"><p>予約はまだ完了していません。内容を確認して「予約する」を押してください。</p></section>
-      <section class="ipk-confirm-patient">${blocks}</section>
-      <div class="btn-area"><button type="button" class="ipk-primary-btn">予約する</button></div>`;
+      <section class="ipk-guide"><p class="ipk-guide-message-center"><em>予約はまだ完了していません。</em></p></section>
+      ${requestDateHtml()}
+      <section class="ipk-confirm-patient"><h1 class="ipk-confirm-patient-title">受診者</h1>
+        <div>${blocks}<ul class="is-hidden"><section class="ipk-confirm-cancel-code"><div class="cancel-code-title">【 キャンセルコード 】</div><div class="cancel-code-body"></div></section></ul></div>
+        <div class="btn-area"><button type="button" class="pure-button">戻る</button><button type="button" class="ipk-primary-btn pure-button">予約する</button></div>
+      </section>`;
+    $("section.ipk-confirm-patient div.btn-area button.pure-button:not(.ipk-primary-btn)").addEventListener(
+      "click",
+      () => {
+        history.pushState(null, "", `${newPath}/${st.date}/frames/${st.frame.id}/input`);
+        renderInput();
+      },
+    );
     $("div.btn-area button.ipk-primary-btn").addEventListener("click", onBook);
   }
 
@@ -199,5 +281,7 @@
     }
   }
 
-  renderFramesScreen();
+  const delay = Number(script?.dataset.hydrationMs ?? 0);
+  if (delay > 0) setTimeout(hydrateTop, delay);
+  else hydrateTop();
 })();
