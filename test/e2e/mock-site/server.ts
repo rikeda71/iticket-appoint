@@ -236,7 +236,8 @@ export class MockSite {
   }
 }
 
-const STYLE = `<style>.is-hidden{display:none}</style>`;
+// 保存される html / png を読みやすくするための最小限の見た目。表示・非表示を決めるのは .is-hidden だけ
+const STYLE = `<style>${readFileSync(new URL("./style.css", import.meta.url), "utf8")}</style>`;
 
 function topPage(top: string, open: boolean): string {
   const status = open
