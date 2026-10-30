@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline/promises";
-import type { Browser } from "playwright";
+import type { Browser, Page } from "playwright";
 import { Artifacts } from "../browser/artifacts.js";
+import { waitForClose } from "../browser/keep-open.js";
 import { launchBrowser } from "../browser/session.js";
 import { loadConfig, resolveProfiles } from "../config/load.js";
 import { attemptBooking, type BookResult } from "../flow/book-flow.js";
@@ -40,6 +41,7 @@ export interface BookOptions {
   deadline?: string;
   once?: boolean;
   headed?: boolean;
+  keepOpen?: boolean;
   trace?: boolean;
   force?: boolean;
 }
@@ -73,6 +75,10 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
   });
   const frame = o.frame ?? clinic.frame;
   const submit = o.submit ?? false;
+  if (o.keepOpen && submit) throw new ConfigError("--keep-open は --submit と同時に使えません (お試し専用です)");
+  // --keep-open は画面を見て手動で操作するので headed にする (ITICKET_KEEP_OPEN_HEADLESS=1 はテスト用)
+  const forceHeaded = o.headed || (o.keepOpen && !process.env.ITICKET_KEEP_OPEN_HEADLESS);
+  const headless = forceHeaded ? false : cfg.browser.headless;
   const wait = {
     interval: o.interval ?? cfg.wait.interval_sec,
     maxAttempts: o.once ? 1 : (o.maxAttempts ?? cfg.wait.max_attempts),
@@ -89,7 +95,7 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
     `医院: ${clinic.name ?? clinicKey} (${businessTopUrl(clinic)})`,
     `患者: ${names} (${patients.length} 人)${frame ? ` / 枠: ${frame}` : ""}`,
     `開始: ${formatTime(target)}${deadline ? ` / 締切: ${formatTime(deadline)}` : ""} / 最大 ${wait.maxAttempts} 回・${wait.interval} 秒間隔`,
-    `モード: ${submit ? "本番 (予約する)" : "お試し (確認画面で停止)"}`,
+    `モード: ${submit ? "本番 (予約する)" : o.keepOpen ? "お試し (確認画面でブラウザを残す)" : "お試し (確認画面で停止)"}`,
   ].join("\n");
   console.error(summary);
 
@@ -105,9 +111,17 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
       `本日は既に${prior.status === "attempted" ? "予約ボタンを押した (結果未確認の)" : "予約済みの"}記録があります (${prior.patients.join(", ")}${prior.accept_no ? ` 受付番号 ${prior.accept_no}` : ""})。予約状況を確認し、それでも再実行するなら --force`,
     );
   }
+  // --keep-open の待機中は Ctrl-C で待機だけを終え、通常どおり後片付けして終了する
+  const stopWait = new AbortController();
+  let waiting = false;
   const onSignal = () => {
+    if (waiting) {
+      stopWait.abort();
+      return;
+    }
     release();
-    process.exit(130);
+    // Playwright 既定のシグナル処理は無効にしてあるので、ブラウザは自分で閉じてから終了する
+    void (browser?.close().catch(() => undefined) ?? Promise.resolve()).finally(() => process.exit(130));
   };
   process.once("SIGINT", onSignal);
   process.once("SIGTERM", onSignal);
@@ -119,7 +133,7 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
     const warm = prewarmAt(target, cfg.wait.prewarm_sec);
     if (warm > clock.now()) art.log(`${formatTime(warm)} まで待機してからブラウザを起動します`);
     await sleepUntil(warm, clock);
-    browser = await launchBrowser({ ...cfg.browser, headless: o.headed ? false : cfg.browser.headless });
+    browser = await launchBrowser({ ...cfg.browser, headless });
     const b = browser;
     const result: BookResult = await poll({
       startAt: target,
@@ -140,10 +154,26 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
             submit,
             session: {
               ...cfg.browser,
-              headless: o.headed ? false : cfg.browser.headless,
+              headless,
               ...(o.trace ? { trace: true } : {}),
             },
             artifacts: art,
+            ...(o.keepOpen
+              ? {
+                  onConfirm: async (page: Page) => {
+                    waiting = true;
+                    try {
+                      await notify("iticket 確認画面に到達", `${names}: ブラウザを残して待機中`, (m) => art.log(m));
+                      art.log(
+                        "ブラウザを閉じるまで待機します (Ctrl-C でも終了)。予約するなら画面の「予約する」を押してください (セッションは約 60 分で切れます)。手動での予約は ledger に記録されません",
+                      );
+                      await waitForClose(page, stopWait.signal);
+                    } finally {
+                      waiting = false;
+                    }
+                  },
+                }
+              : {}),
             onSubmit: () =>
               ledger.record({
                 date: localDate(clock.now()),
@@ -161,6 +191,10 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
     if (result.kind === "dry-run") {
       art.log(`お試し完了: 確認画面まで進みました (枠: ${result.frame.name})`);
       art.logFile(result.confirmText);
+      if (o.keepOpen) {
+        art.log("待機を終了します");
+        return 0;
+      }
       art.log("本当に予約するには --submit を付けてください");
       await notify("iticket お試し完了", `${names}: 確認画面まで到達 (${result.frame.name})`, (m) => art.log(m));
       return 0;

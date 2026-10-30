@@ -10,7 +10,8 @@ const BLOCKED_TYPES = new Set(["image", "font", "media"]);
 const BLOCKED_HOSTS = /(googletagmanager|google-analytics|doubleclick|googlesyndication|securepubads|adservice)\./;
 
 export async function launchBrowser(o: SessionOptions): Promise<Browser> {
-  return chromium.launch({ headless: o.headless });
+  // シグナルは呼び出し側 (book) が処理する。Playwright 既定だと Ctrl-C で即 exit(130) してしまう
+  return chromium.launch({ headless: o.headless, handleSIGINT: false, handleSIGTERM: false, handleSIGHUP: false });
 }
 
 /**

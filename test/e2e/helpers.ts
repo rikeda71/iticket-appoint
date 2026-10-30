@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -80,14 +80,22 @@ export function makeSandbox(yaml: string = configYaml()): Sandbox {
   return { dir, configPath, artifacts, state };
 }
 
-/** CLI を子プロセスで実行する (モックはこのプロセスで動いているので同期実行しない) */
-export function runCli(
+export interface RunningCli {
+  child: ChildProcess;
+  /** これまでの stdout + stderr */
+  output: () => string;
+  /** 終了を待つ */
+  done: Promise<CliResult>;
+}
+
+/** CLI を子プロセスで起動する (終了を待たずに途中で操作したいとき用) */
+export function startCli(
   site: MockSite,
   sb: Sandbox,
   args: string[],
   timeoutMs = 90_000,
   extraEnv: NodeJS.ProcessEnv = {},
-): Promise<CliResult> {
+): RunningCli {
   assertLocalBaseUrl(site.baseUrl);
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -99,15 +107,15 @@ export function runCli(
   };
   delete env.NOTIFY_URL;
   delete env.ITICKET_CONFIG;
-  return new Promise((resolvePromise, reject) => {
-    const child = spawn(process.execPath, ["--import", "tsx", "src/cli.ts", "-c", sb.configPath, ...args], {
-      cwd: REPO_ROOT,
-      env,
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (c: Buffer) => (stdout += c.toString("utf8")));
-    child.stderr.on("data", (c: Buffer) => (stderr += c.toString("utf8")));
+  const child = spawn(process.execPath, ["--import", "tsx", "src/cli.ts", "-c", sb.configPath, ...args], {
+    cwd: REPO_ROOT,
+    env,
+  });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (c: Buffer) => (stdout += c.toString("utf8")));
+  child.stderr.on("data", (c: Buffer) => (stderr += c.toString("utf8")));
+  const done = new Promise<CliResult>((resolvePromise, reject) => {
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
       reject(new Error(`CLI がタイムアウトしました (${timeoutMs}ms)\n${stderr}`));
@@ -118,6 +126,18 @@ export function runCli(
       resolvePromise({ code, stdout, stderr, output: stdout + stderr });
     });
   });
+  return { child, output: () => stdout + stderr, done };
+}
+
+/** CLI を子プロセスで実行する (モックはこのプロセスで動いているので同期実行しない) */
+export function runCli(
+  site: MockSite,
+  sb: Sandbox,
+  args: string[],
+  timeoutMs = 90_000,
+  extraEnv: NodeJS.ProcessEnv = {},
+): Promise<CliResult> {
+  return startCli(site, sb, args, timeoutMs, extraEnv).done;
 }
 
 export function readLedger(sb: Sandbox): LedgerEntry[] {

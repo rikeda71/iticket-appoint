@@ -27,6 +27,8 @@ export interface BookParams {
   artifacts: Artifacts;
   /** 「予約する」を押す直前に呼ぶ (送信済みの記録用) */
   onSubmit?: () => void;
+  /** お試しで確認画面に着いたあと、結果を返す前に呼ぶ (--keep-open でブラウザを残して待つ用)。コンテキストはこの間開いたまま */
+  onConfirm?: (page: Page) => Promise<void>;
 }
 
 export type BookResult =
@@ -65,6 +67,7 @@ export async function attemptBooking(browser: Browser, p: BookParams, attempt: n
     art.log("確認画面に到達しました");
 
     if (!p.submit) {
+      await p.onConfirm?.(page);
       return { kind: "dry-run", frame, confirmText, ...(shot ? { screenshot: shot } : {}) };
     }
 
