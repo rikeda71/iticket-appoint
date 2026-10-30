@@ -52,6 +52,7 @@ program
   .option("--deadline <HH:MM>", "この時刻を過ぎたら諦める", hhmm(false))
   .addOption(new Option("--once", "再試行しない (1 回だけ)").conflicts("maxAttempts"))
   .option("--headed", "ブラウザを表示")
+  .option("--keep-open", "確認画面でブラウザを残し、閉じるまで待つ (お試し専用・headed になる)")
   .option("--trace", "Playwright trace を保存")
   .option("--force", "同じ日の予約記録があっても実行")
   .action(async (o: Omit<Parameters<typeof book>[0], "config">) => {
