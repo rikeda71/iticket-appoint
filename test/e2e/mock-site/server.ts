@@ -11,6 +11,8 @@ import type { AddressInfo } from "node:net";
 
 export type FrameStatus = "ok" | "full" | "out-of-period";
 export type BookResponse = "ok" | "errorModal" | "hang";
+/** 完了画面の文言: standard=「受付番号：N」 / dl=「予約番号」が dt/dd で「N番」 / none=番号なし (氏名などを表示) */
+export type CompleteVariant = "standard" | "dl" | "none";
 
 export interface MockFrame {
   id: string;
@@ -78,6 +80,7 @@ export class MockSite {
   frames: MockFrame[] = defaultFrames();
   /** 「予約する」(POST /mock/api/book) への応答 */
   bookResponse: BookResponse = "ok";
+  completeVariant: CompleteVariant = "standard";
   errorMessage = "サーバーエラーが発生しました。時間を空けて再度お試しください。";
   /** 医院独自の入力項目 (診察券・氏名・生年月日・電話番号の他) */
   customFields: CustomField[] = [{ title: "症状", required: false }];
@@ -122,6 +125,7 @@ export class MockSite {
     this.openAt = undefined;
     this.frames = defaultFrames();
     this.bookResponse = "ok";
+    this.completeVariant = "standard";
     this.customFields = [{ title: "症状", required: false }];
     this.bookings = [];
     this.bookPostCount = 0;
@@ -233,7 +237,18 @@ export class MockSite {
     }
     const acceptNo = String(100 + this.bookings.length);
     this.bookings.push({ date: body.date, frameId: body.frameId, frameName: frame?.name ?? "", acceptNo, patients });
-    json(res, 200, { acceptNo });
+    json(res, 200, { acceptNo, completeHtml: this.completeHtml(acceptNo, patients[0]?.name ?? "") });
+  }
+
+  private completeHtml(acceptNo: string, name: string): string {
+    switch (this.completeVariant) {
+      case "dl":
+        return `<section class="ipk-complete"><h1>予約を受け付けました</h1><dl><dt>予約番号</dt><dd>${acceptNo}<span>番</span></dd></dl></section>`;
+      case "none":
+        return `<section class="ipk-complete"><p>${name} 様の予約が完了しました。</p><p>診察券番号 10001 / 電話 090-1111-2222</p></section>`;
+      default:
+        return `<section class="ipk-complete"><p>予約が完了しました。</p><p>受付番号：${acceptNo}</p></section>`;
+    }
   }
 
   private html(res: ServerResponse, body: string) {
