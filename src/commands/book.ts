@@ -173,9 +173,25 @@ export async function book(o: BookOptions, clock: Clock = systemClock): Promise<
       ...(result.acceptNo ? { accept_no: result.acceptNo } : {}),
       at: new Date(clock.now()).toISOString(),
     });
-    const msg = `${names}: 予約しました (${result.frame.name})${result.acceptNo ? ` 受付番号 ${result.acceptNo}` : ""}`;
+    const msg = `${names}: 予約しました (${result.frame.name})${result.acceptNo ? ` 受付番号 ${result.acceptNo}` : " (受付番号は読み取れませんでした。完了画面を確認してください)"}`;
     art.log(msg);
-    art.logFile(result.text);
+    if (result.acceptNo) {
+      art.logFile(result.text);
+      art.log(`受付番号: ${result.acceptNo}`);
+    } else {
+      // 受付番号が取れなくても予約は成立している。本人が読めるよう完了画面の本文と記録先を出す
+      art.log("受付番号を完了画面から読み取れませんでした (予約自体は完了しています)");
+      if (art.redact) {
+        art.log("ITICKET_REDACT=1 のため完了画面の本文は出力・保存しません。医院に直接確認してください");
+      } else {
+        art.log(`完了画面の本文: ${result.text.length > 1500 ? `${result.text.slice(0, 1500)}…` : result.text}`);
+        art.log(
+          result.screenshot
+            ? `完了画面の記録: ${result.screenshot} (同名の .html もあります)`
+            : `完了画面の記録は ${art.dir} を確認してください`,
+        );
+      }
+    }
     await notify("iticket 予約完了", msg, (m) => art.log(m));
     return 0;
   } catch (e) {

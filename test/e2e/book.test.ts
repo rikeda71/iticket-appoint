@@ -78,6 +78,7 @@ describe("book (E2E: モックサイト)", () => {
       { name: "テスト 一郎", cardNo: "10001", birth: "1990-01-02", phone: "09011112222", custom: { 症状: "鼻水" } },
     ]);
     expect(r.output).toContain(`受付番号 ${b.acceptNo}`);
+    expect(r.stderr.trimEnd().split("\n").at(-1)).toBe(`受付番号: ${b.acceptNo}`);
     const ledger = readLedger(sb);
     expect(ledger.at(-1)).toMatchObject({ clinic: "mock", patients: ["a"], status: "booked", accept_no: b.acceptNo });
     expect(artifactFiles(sb).some((f) => f.endsWith("-complete.png"))).toBe(true);
@@ -94,6 +95,47 @@ describe("book (E2E: モックサイト)", () => {
     for (const pii of ["テスト 一郎", "テスト一郎", "10001", "090-1111-2222", "09011112222", "1990"]) {
       expect(text, pii).not.toContain(pii);
     }
+  });
+
+  it("完了画面が「予約番号」を dt/dd と「N番」で出す場合も受付番号を拾って最後の行に出す", async () => {
+    site.completeVariant = "dl";
+    const r = await runCli(site, sb, SUBMIT);
+    expect(r.code, r.output).toBe(0);
+    const b = site.bookings[0]!;
+    expect(r.stderr.trimEnd().split("\n").at(-1)).toBe(`受付番号: ${b.acceptNo}`);
+    expect(readLedger(sb).at(-1)).toMatchObject({ status: "booked", accept_no: b.acceptNo });
+  });
+
+  it("受付番号が読み取れなくても exit 0: 完了画面の本文と記録先を出し、ledger は booked (番号なし)", async () => {
+    site.completeVariant = "none";
+    const r = await runCli(site, sb, SUBMIT);
+    expect(r.code, r.output).toBe(0);
+    expect(site.bookings).toHaveLength(1);
+    expect(r.output).toContain("受付番号を完了画面から読み取れませんでした");
+    expect(r.output).toContain("完了画面の本文: テスト 一郎 様の予約が完了しました。");
+    expect(r.output).toMatch(/完了画面の記録: \S+-complete\.png/);
+    expect(r.output).not.toContain("受付番号:");
+    const last = readLedger(sb).at(-1)!;
+    expect(last.status).toBe("booked");
+    expect(last.accept_no).toBeUndefined();
+  });
+
+  it("ITICKET_REDACT=1 で受付番号が読み取れない場合: exit 0・本文 (氏名など) は出力も保存もしない", async () => {
+    site.completeVariant = "none";
+    const r = await runCli(site, sb, SUBMIT, undefined, { ITICKET_REDACT: "1" });
+    expect(r.code, r.output).toBe(0);
+    expect(r.output).toContain("受付番号を完了画面から読み取れませんでした");
+    expect(r.output).toContain("完了画面の本文は出力・保存しません");
+    const text = artifactText(sb) + r.output;
+    for (const pii of ["テスト 一郎", "テスト一郎", "10001", "090-1111-2222", "09011112222"]) {
+      expect(text, pii).not.toContain(pii);
+    }
+  });
+
+  it("ITICKET_REDACT=1 で受付番号が読めた場合: 番号だけを出す", async () => {
+    const r = await runCli(site, sb, SUBMIT, undefined, { ITICKET_REDACT: "1" });
+    expect(r.code, r.output).toBe(0);
+    expect(r.stderr.trimEnd().split("\n").at(-1)).toBe(`受付番号: ${site.bookings[0]!.acceptNo}`);
   });
 
   it("同じ設定で再度 submit: 既に予約済みとして exit 5、予約は増えない", async () => {

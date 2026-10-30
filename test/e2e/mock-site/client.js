@@ -275,7 +275,7 @@
         return;
       }
       history.pushState(null, "", `${topPath}/bookings/new_complete`);
-      app.innerHTML = `<section class="ipk-complete"><p>予約が完了しました。</p><p>受付番号：${esc(data.acceptNo)}</p></section>`;
+      app.innerHTML = data.completeHtml;
     } catch {
       showModal("通信エラーが発生しました。");
     }
